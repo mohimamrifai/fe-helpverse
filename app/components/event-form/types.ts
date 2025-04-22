@@ -5,6 +5,10 @@ export interface TicketType {
   limit: string;
   rows?: number;
   columns?: number;
+  description?: string;
+  category?: string;
+  maxPerOrder?: string;
+  saleEndDate?: string;
 }
 
 export interface Section {
@@ -19,7 +23,7 @@ export interface Section {
 
 export interface Seat {
   id: string;
-  status: 'available' | 'reserved' | 'selected';
+  status: 'available' | 'reserved' | 'selected' | 'booked';
   price?: number;
 }
 

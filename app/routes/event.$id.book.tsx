@@ -136,24 +136,36 @@ export default function EventBookingPage() {
                     if (eventData.seatArrangement && eventData.seatArrangement.seats) {
                         console.log(`Pengaturan tempat duduk: ${eventData.seatArrangement.rows} baris, ${eventData.seatArrangement.columns} kolom, ${eventData.seatArrangement.seats.length} kursi`);
                         
-                        // Hitung jumlah kursi per kategori
-                        const seatsByCategory: Record<string, number> = {
-                            'VVIP': 0,
-                            'VIP': 0,
-                            'Regular': 0
-                        };
+                        // Hitung jumlah kursi per kategori berdasarkan tipe tiket
+                        const seatsByCategory: Record<string, number> = {};
+                        
+                        // Inisialisasi counter untuk setiap tipe tiket
+                        if (eventData.ticketTypes && eventData.ticketTypes.length > 0) {
+                            eventData.ticketTypes.forEach(ticket => {
+                                if (ticket.name) {
+                                    seatsByCategory[ticket.name] = 0;
+                                }
+                            });
+                        } else {
+                            // Fallback jika tidak ada tipe tiket
+                            seatsByCategory['Default'] = 0;
+                        }
                         
                         eventData.seatArrangement.seats.forEach(seat => {
                             if (!seat.id) return;
                             
                             const rowChar = seat.row || seat.id.charAt(0);
                             
-                            // Tentukan kategori berdasarkan baris
-                            let category = 'Regular';
-                            if (['F', 'G', 'H'].includes(rowChar)) {
-                                category = 'VIP';
-                            } else if (['I', 'J', 'K'].includes(rowChar)) {
-                                category = 'VVIP';
+                            // Tentukan kategori berdasarkan harga dan tipe tiket
+                            let foundTicket = eventData.ticketTypes.find(
+                                t => parseFloat(t.price?.toString() || '0') === seat.price
+                            );
+                            
+                            let category = foundTicket?.name || 'Default';
+                            
+                            // Pastikan kategori ada dalam seatsByCategory
+                            if (!seatsByCategory[category]) {
+                                seatsByCategory[category] = 0;
                             }
                             
                             seatsByCategory[category]++;
@@ -343,16 +355,16 @@ export default function EventBookingPage() {
                     // Urutkan baris
                     const rowLabels = Object.keys(seatsByRow).sort();
                     
-                    // Tentukan warna header berdasarkan kategori atau harga relatif
-                    const category = ticket?.category?.toLowerCase() || '';
+                    // Tentukan warna header berdasarkan harga relatif
                     let headerClass = 'bg-primary';
                     
-                    if (category === 'vip' || price === prices[0]) {
-                        headerClass = 'bg-purple-600'; // Paling mahal / VIP
-                    } else if (category === 'regular' || price === prices[Math.floor(prices.length / 2)]) {
-                        headerClass = 'bg-indigo-600'; // Menengah / Regular
-                    } else if (category === 'economy' || price === prices[prices.length - 1]) {
-                        headerClass = 'bg-gray-600'; // Paling murah / Economy
+                    // Tentukan warna berdasarkan posisi harga dalam daftar (tertinggi, tengah, terendah)
+                    if (price === prices[0]) {
+                        headerClass = 'bg-purple-600'; // Tiket paling mahal
+                    } else if (prices.length > 2 && price === prices[Math.floor(prices.length / 2)]) {
+                        headerClass = 'bg-indigo-600'; // Tiket harga menengah
+                    } else if (price === prices[prices.length - 1]) {
+                        headerClass = 'bg-gray-600'; // Tiket paling murah
                     }
 
                     // Format harga tiket

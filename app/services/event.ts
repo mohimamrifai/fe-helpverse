@@ -549,5 +549,43 @@ export const eventService = {
       }
       throw error;
     }
+  },
+
+  // Fungsi untuk membuat kursi secara massal untuk event
+  async createBulkSeats(eventId: string, seatData: {
+    section: string;
+    rows: string; // Format: "A-E"
+    seatsPerRow: number;
+    basePrice: number;
+    ticketDistribution: Array<{
+      ticketType: string;
+      count: number;
+    }>;
+    seatNumbering?: 'alpha' | 'numeric';
+    useTicketTypePrice?: boolean;
+  }): Promise<any> {
+    try {
+      const response = await api.post('/api/seats/bulk', {
+        event: eventId,
+        section: seatData.section,
+        rows: seatData.rows,
+        seatsPerRow: seatData.seatsPerRow,
+        basePrice: seatData.basePrice,
+        ticketDistribution: seatData.ticketDistribution,
+        seatNumbering: seatData.seatNumbering || 'numeric',
+        useTicketTypePrice: seatData.useTicketTypePrice !== undefined ? seatData.useTicketTypePrice : true
+      });
+      
+      if (response.data.success) {
+        return response.data.data;
+      }
+      
+      throw new Error(response.data.message || 'Gagal membuat kursi secara massal');
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        throw new Error(error.response.data.message || 'Gagal membuat kursi secara massal');
+      }
+      throw error;
+    }
   }
 }; 

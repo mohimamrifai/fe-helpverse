@@ -15,6 +15,7 @@ interface FormInputProps {
   className?: string;
   textarea?: boolean;
   rows?: number;
+  error?: string;
 }
 
 export function FormInput({
@@ -31,17 +32,19 @@ export function FormInput({
   icon,
   className = '',
   textarea = false,
-  rows = 4
+  rows = 4,
+  error
 }: FormInputProps) {
-  const inputBaseClass = "mt-2 block w-full px-4 py-3 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm transition duration-150 ease-in-out";
+  const hasError = !!error;
+  const inputBaseClass = `mt-1 block w-full px-3 py-2 sm:px-4 sm:py-3 rounded-md ${hasError ? 'border-red-300 focus:border-red-500 focus:ring-red-500 bg-red-50' : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'} shadow-sm text-sm transition duration-150 ease-in-out`;
 
   return (
     <div className={className}>
-      <label htmlFor={name} className="block text-sm font-semibold text-gray-700">
+      <label htmlFor={name} className="block text-xs sm:text-sm font-semibold text-gray-700">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       {icon ? (
-        <div className="mt-2 relative">
+        <div className="mt-1 relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             {icon}
           </div>
@@ -53,8 +56,10 @@ export function FormInput({
               onChange={onChange}
               required={required}
               rows={rows}
-              className={`${inputBaseClass} pl-10`}
+              className={`${inputBaseClass} pl-9 sm:pl-10`}
               placeholder={placeholder}
+              aria-invalid={hasError}
+              aria-describedby={hasError ? `${name}-error` : undefined}
             />
           ) : (
             <input
@@ -67,8 +72,10 @@ export function FormInput({
               min={min}
               max={max}
               minLength={minLength}
-              className={`${inputBaseClass} pl-10`}
+              className={`${inputBaseClass} pl-9 sm:pl-10`}
               placeholder={placeholder}
+              aria-invalid={hasError}
+              aria-describedby={hasError ? `${name}-error` : undefined}
             />
           )}
         </div>
@@ -83,6 +90,8 @@ export function FormInput({
             rows={rows}
             className={inputBaseClass}
             placeholder={placeholder}
+            aria-invalid={hasError}
+            aria-describedby={hasError ? `${name}-error` : undefined}
           />
         ) : (
           <input
@@ -97,8 +106,15 @@ export function FormInput({
             minLength={minLength}
             className={inputBaseClass}
             placeholder={placeholder}
+            aria-invalid={hasError}
+            aria-describedby={hasError ? `${name}-error` : undefined}
           />
         )
+      )}
+      {hasError && (
+        <p className="mt-1 text-xs sm:text-sm text-red-600" id={`${name}-error`}>
+          {error}
+        </p>
       )}
     </div>
   );
