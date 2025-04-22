@@ -33,12 +33,14 @@ export const useRegisterEventOrganizer = () => {
   const [user, setUser] = useState<User | null>(null);
 
   const register = async (data: {
+    username: string;
     fullName: string;
     email: string;
     phone: string;
     organizationName: string;
     password: string;
     agreeTerms: boolean;
+    role: string;
   }) => {
     try {
       setLoading(true);

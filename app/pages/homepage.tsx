@@ -8,20 +8,33 @@ import { TicketSection } from "~/components/ticketSection";
 import { useAuth } from "../contexts/auth";
 
 export default function Homepage() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  
+  const isAdmin = user?.role === "admin";
+  const isEventOrganizer = user?.role === "eventOrganizer";
+  const isRegularUser = !user || user.role === "user";
 
   return (
     <main>
       <Navbar />
       <Hero />
       <TicketSection />
-      {(!user || user.role === "user") && <PromotionSection />}
-      {user?.role === "eventOrganizer" && (
-        <ButtonEventOrganizer />
+      
+      {/* Menampilkan konten berdasarkan role yang valid */}
+      {!loading && (
+        <>
+          {isRegularUser && <PromotionSection />}
+          
+          {isEventOrganizer && (
+            <ButtonEventOrganizer />
+          )}
+          
+          {isAdmin && (
+            <ButtonAdmin />
+          )}
+        </>
       )}
-      {user?.role === "admin" && (
-        <ButtonAdmin />
-      )}
+      
       <Footer />
     </main>
   )

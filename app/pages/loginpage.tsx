@@ -6,7 +6,7 @@ import { useAuth } from "../contexts/auth";
 export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const { login } = useAuth();
+    const { login, refreshUserData, user } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const from = location.state?.from?.pathname || "/";
@@ -29,9 +29,18 @@ export default function LoginPage() {
         e.preventDefault();
         setError(null);
         try {
+            console.log("Attempting login with:", formData.username);
             await login(formData.username, formData.password, formData.rememberMe);
+            
+            // Refresh user data untuk memastikan user data ter-load dengan benar
+            console.log("Login successful, refreshing user data...");
+            await refreshUserData();
+            
+            console.log("User data after refresh:", user);
+            console.log("Navigating to:", from);
             navigate(from, { replace: true });
         } catch (err) {
+            console.error("Login error:", err);
             setError(err instanceof Error ? err.message : "Login failed. Please try again.");
         }
     };

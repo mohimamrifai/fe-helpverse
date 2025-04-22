@@ -7,6 +7,7 @@ import { TicketTypesStep } from '~/components/event-form/TicketTypesStep';
 import { SeatArrangementStep } from '~/components/event-form/SeatArrangementStep';
 import { NavigationButtons } from '~/components/event-form/NavigationButtons';
 import type { EventDetails, TicketType } from '~/components/event-form/types';
+import { AuthGuard } from '~/components/AuthGuard';
 
 export function meta() {
   return [
@@ -95,56 +96,58 @@ export default function CreateEvent() {
   ];
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <Navbar />
-      <div className="max-w-7xl mx-auto py-16 md:py-28 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="max-w-3xl mx-auto">
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-900">Create New Event</h1>
-              <p className="mt-2 text-sm text-gray-600">
-                Step {currentStep} of {steps.length}
-              </p>
-            </div>
-
-            <div className="bg-white shadow rounded-lg p-6">
-              {steps[currentStep - 1].component}
-              <NavigationButtons
-                currentStep={currentStep}
-                totalSteps={steps.length}
-                onPrevious={handlePrevious}
-                onNext={handleNext}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-      <Footer />
-
-      {/* Success Modal */}
-      {showSuccessModal && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
+    <AuthGuard allowedRoles={['eventOrganizer']}>
+      <main className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="max-w-7xl mx-auto py-16 md:py-28 sm:px-6 lg:px-8">
+          <div className="px-4 py-6 sm:px-0">
+            <div className="max-w-3xl mx-auto">
+              <div className="text-center mb-8">
+                <h1 className="text-3xl font-bold text-gray-900">Create New Event</h1>
+                <p className="mt-2 text-sm text-gray-600">
+                  Step {currentStep} of {steps.length}
+                </p>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Event Created Successfully!</h3>
-              <p className="text-sm text-gray-500 mb-4">
-                Your event has been created successfully. You will be redirected to the home page.
-              </p>
-              <button
-                onClick={handleSuccessModalClose}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                OK
-              </button>
+
+              <div className="bg-white shadow rounded-lg p-6">
+                {steps[currentStep - 1].component}
+                <NavigationButtons
+                  currentStep={currentStep}
+                  totalSteps={steps.length}
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                />
+              </div>
             </div>
           </div>
         </div>
-      )}
-    </main>
+        <Footer />
+
+        {/* Success Modal */}
+        {showSuccessModal && (
+          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+              <div className="text-center">
+                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                  <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Event Created Successfully!</h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  Your event has been created successfully. You will be redirected to the home page.
+                </p>
+                <button
+                  onClick={handleSuccessModalClose}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+    </AuthGuard>
   );
 } 

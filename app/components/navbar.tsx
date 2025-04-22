@@ -35,7 +35,9 @@ export function Navbar() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
-    const roleLinks = user?.role ? linksByRole[user.role] : [];
+    const roleLinks = user?.role && linksByRole[user.role as keyof typeof linksByRole] 
+        ? linksByRole[user.role as keyof typeof linksByRole] 
+        : [];
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {

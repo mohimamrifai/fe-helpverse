@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
+import { useRegisterEventOrganizer } from '../../hooks/useAuth';
 
 export function meta() {
   return [
@@ -9,7 +10,10 @@ export function meta() {
 }
 
 export default function RegisterEventOrganizer() {
+  const navigate = useNavigate();
+  const { register, loading, error } = useRegisterEventOrganizer();
   const [formData, setFormData] = useState({
+    username: '',
     fullName: '',
     email: '',
     phone: '',
@@ -17,6 +21,7 @@ export default function RegisterEventOrganizer() {
     password: '',
     agreeTerms: false
   });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -24,12 +29,76 @@ export default function RegisterEventOrganizer() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+    
+    // Clear error for this field when user types
+    if (formErrors[name]) {
+      setFormErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    
+    if (!formData.username.trim()) {
+      errors.username = 'Username harus diisi';
+    }
+    
+    if (!formData.fullName.trim()) {
+      errors.fullName = 'Nama lengkap harus diisi';
+    }
+    
+    if (!formData.email.trim()) {
+      errors.email = 'Email harus diisi';
+    } else if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
+      errors.email = 'Format email tidak valid';
+    }
+    
+    if (!formData.phone.trim()) {
+      errors.phone = 'Nomor telepon harus diisi';
+    }
+    
+    if (!formData.organizationName.trim()) {
+      errors.organizationName = 'Nama organisasi harus diisi';
+    }
+    
+    if (!formData.password.trim()) {
+      errors.password = 'Password harus diisi';
+    } else if (formData.password.length < 6) {
+      errors.password = 'Password minimal 6 karakter';
+    }
+    
+    if (!formData.agreeTerms) {
+      errors.agreeTerms = 'Anda harus menyetujui syarat dan ketentuan';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Handle form submission logic here
-    console.log(formData);
+    
+    if (!validateForm()) {
+      console.log('Form validation failed:', formErrors);
+      return;
+    }
+    
+    try {
+      console.log('Form data being submitted:', formData);
+      await register({
+        ...formData,
+        role: 'eventOrganizer'
+      });
+      alert('Event organizer successfully registered!');
+      navigate('/');
+    } catch (err) {
+      console.error('Registration error:', err);
+      // Error will be handled by the hook and displayed below
+    }
   };
 
   return (
@@ -40,8 +109,30 @@ export default function RegisterEventOrganizer() {
           <p className="mt-1 text-sm text-gray-600">Create your event organizer account</p>
         </div>
         
+        {error && (
+          <div className="p-3 rounded-md bg-red-50 text-red-700 text-sm">
+            {error}
+          </div>
+        )}
+        
         <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-3">
+            <div>
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700">Username</label>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                required
+                className={`mt-1 block w-full px-3 py-2 border ${formErrors.username ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary`}
+                value={formData.username}
+                onChange={handleChange}
+              />
+              {formErrors.username && (
+                <p className="mt-1 text-sm text-red-600">{formErrors.username}</p>
+              )}
+            </div>
+            
             <div>
               <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">Full Name</label>
               <input
@@ -49,10 +140,13 @@ export default function RegisterEventOrganizer() {
                 name="fullName"
                 type="text"
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                className={`mt-1 block w-full px-3 py-2 border ${formErrors.fullName ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary`}
                 value={formData.fullName}
                 onChange={handleChange}
               />
+              {formErrors.fullName && (
+                <p className="mt-1 text-sm text-red-600">{formErrors.fullName}</p>
+              )}
             </div>
             
             <div>
@@ -62,10 +156,13 @@ export default function RegisterEventOrganizer() {
                 name="email"
                 type="email"
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                className={`mt-1 block w-full px-3 py-2 border ${formErrors.email ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary`}
                 value={formData.email}
                 onChange={handleChange}
               />
+              {formErrors.email && (
+                <p className="mt-1 text-sm text-red-600">{formErrors.email}</p>
+              )}
             </div>
             
             <div>
@@ -75,10 +172,13 @@ export default function RegisterEventOrganizer() {
                 name="phone"
                 type="tel"
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                className={`mt-1 block w-full px-3 py-2 border ${formErrors.phone ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary`}
                 value={formData.phone}
                 onChange={handleChange}
               />
+              {formErrors.phone && (
+                <p className="mt-1 text-sm text-red-600">{formErrors.phone}</p>
+              )}
             </div>
             
             <div>
@@ -88,10 +188,13 @@ export default function RegisterEventOrganizer() {
                 name="organizationName"
                 type="text"
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                className={`mt-1 block w-full px-3 py-2 border ${formErrors.organizationName ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary`}
                 value={formData.organizationName}
                 onChange={handleChange}
               />
+              {formErrors.organizationName && (
+                <p className="mt-1 text-sm text-red-600">{formErrors.organizationName}</p>
+              )}
             </div>
             
             <div>
@@ -101,10 +204,13 @@ export default function RegisterEventOrganizer() {
                 name="password"
                 type="password"
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                className={`mt-1 block w-full px-3 py-2 border ${formErrors.password ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary`}
                 value={formData.password}
                 onChange={handleChange}
               />
+              {formErrors.password && (
+                <p className="mt-1 text-sm text-red-600">{formErrors.password}</p>
+              )}
             </div>
             
             <div className="flex items-center">
@@ -113,22 +219,26 @@ export default function RegisterEventOrganizer() {
                 name="agreeTerms"
                 type="checkbox"
                 required
-                className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                className={`h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded ${formErrors.agreeTerms ? 'border-red-500' : ''}`}
                 checked={formData.agreeTerms}
                 onChange={handleChange}
               />
-              <label htmlFor="agreeTerms" className="ml-2 block text-sm text-gray-700">
+              <label htmlFor="agreeTerms" className={`ml-2 block text-sm ${formErrors.agreeTerms ? 'text-red-600' : 'text-gray-700'}`}>
                 I agree to the <a href="#" className="text-primary hover:underline">Terms and Conditions</a>
               </label>
             </div>
+            {formErrors.agreeTerms && (
+              <p className="mt-1 text-sm text-red-600">{formErrors.agreeTerms}</p>
+            )}
           </div>
           
           <div>
             <button
               type="submit"
-              className="w-full flex cursor-pointer text-secondary justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary"
+              disabled={loading}
+              className="w-full flex cursor-pointer text-secondary justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Create Event Organizer
+              {loading ? 'Processing...' : 'Create Event Organizer'}
             </button>
           </div>
         </form>
