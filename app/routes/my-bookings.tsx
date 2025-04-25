@@ -1,0 +1,452 @@
+import * as React from 'react';
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router';
+import { Navbar } from '~/components/navbar';
+import { Footer } from '~/components/footer';
+import { FaCalendarAlt, FaClock, FaMapMarkerAlt, FaTicketAlt, FaSearch, FaTag } from 'react-icons/fa';
+import axios from 'axios';
+
+// Booking data type
+interface Booking {
+  id: string;
+  eventId: string;
+  eventName: string;
+  eventImage: string;
+  location: string;
+  date: string;
+  time: string;
+  seats: string[];
+  ticketType: string;
+  totalPrice: number;
+  subtotal?: number;
+  discount?: number;
+  promoCode?: string | null;
+  promoDiscount?: number;
+  status: 'active' | 'completed' | 'cancelled';
+  paymentMethod: string;
+  transactionId: string;
+  bookingDate: string;
+}
+
+// API endpoint yang sesuai dengan dokumentasi API
+const API_URL = 'http://localhost:5000/api/orders';
+
+export function meta() {
+  return [
+    { title: "My Bookings - HELPVerse" },
+    { name: "description", content: "View all your bookings and tickets" },
+  ];
+}
+
+export default function MyBookingsPage(): React.ReactElement {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [cancelLoading, setCancelLoading] = useState<string | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [cancelSuccess, setCancelSuccess] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState('');
+  const [modalType, setModalType] = useState<'success' | 'error'>('success');
+
+  const fetchBookings = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Mendapatkan token user dari localStorage sesuai dengan implementasi di services/auth.ts
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        throw new Error('User tidak terautentikasi');
+      }
+
+      // Menggunakan axios untuk konsistensi dengan implementasi services lainnya
+      const response = await axios.get(API_URL, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('API response:', response.data);
+
+      if (response.data.success) {
+        // Transform data dari API menjadi format yang diperlukan untuk tampilan
+        const transformedBookings = response.data.data.map((order: any) => ({
+          id: order.id || order._id,
+          eventId: order.event?.id || order.event || '',
+          eventName: order.event?.name || 'Event',
+          eventImage: order.event?.image || '/event-1.png',
+          location: order.event?.location || 'Lokasi tidak tersedia',
+          date: order.event?.date ? new Date(order.event.date).toLocaleDateString('id-ID', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          }) : 'Tanggal tidak tersedia',
+          time: order.event?.time || 'Waktu tidak tersedia',
+          seats: order.tickets?.[0]?.seats?.map((seat: any) => `${String.fromCharCode(65 + parseInt(seat.row) - 1)}${seat.column}`) || [],
+          ticketType: order.tickets?.[0]?.ticketType || 'Tiket Standar',
+          totalPrice: order.totalAmount || 0,
+          subtotal: order.subtotal || order.totalAmount || 0,
+          discount: order.discount || 0,
+          promoCode: order.promoCode || null,
+          promoDiscount: 0, // Default value jika tidak ada di API
+          status: order.status === 'confirmed' ? 'active' : order.status,
+          paymentMethod: order.paymentInfo?.method || 'Unknown',
+          transactionId: order.paymentInfo?.transactionId || 'Unknown',
+          bookingDate: order.createdAt ? new Date(order.createdAt).toISOString().split('T')[0] : '',
+        }));
+
+        setBookings(transformedBookings);
+      } else {
+        throw new Error(response.data.message || 'Gagal mengambil data booking');
+      }
+    } catch (err) {
+      console.error('Error fetching bookings:', err);
+      if (axios.isAxiosError(err) && err.response) {
+        setError(err.response.data.message || 'Gagal mengambil data booking');
+      } else {
+        setError(err instanceof Error ? err.message : 'Gagal mengambil data booking');
+      }
+      // Set array bookings kosong jika terjadi error
+      setBookings([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // Fungsi untuk mengambil data booking dari API
+    fetchBookings();
+
+    // Tambahkan data booking dari session storage jika tersedia
+    const storedData = sessionStorage.getItem('bookingData');
+    if (storedData) {
+      try {
+        const parsedData = JSON.parse(storedData);
+        const newBooking: Booking = {
+          id: `BK-${Date.now().toString().slice(-6)}`,
+          eventId: parsedData.eventId,
+          eventName: parsedData.eventName || 'Music Festival 2025',
+          eventImage: parsedData.eventImage || '/event-1.png',
+          location: parsedData.eventLocation || 'HELP Auditorium',
+          date: parsedData.eventDate || 'August 10, 2025',
+          time: parsedData.eventTime || '10AM',
+          seats: parsedData.seats?.map((seat: string) => {
+            const [row, col] = seat.split('-');
+            return `${String.fromCharCode(65 + parseInt(row) - 1)}${col}`;
+          }) || [],
+          ticketType: parsedData.ticketType || 'VIP Ticket',
+          totalPrice: parsedData.totalPrice || 0,
+          subtotal: parsedData.subtotal || 0,
+          discount: parsedData.discount || 0,
+          promoCode: parsedData.promoCode || null,
+          promoDiscount: parsedData.promoDiscount || 0,
+          status: 'active',
+          paymentMethod: parsedData.paymentMethod || 'mandiri',
+          transactionId: parsedData.transactionId || `TRX-${Date.now()}`,
+          bookingDate: new Date().toISOString().split('T')[0],
+        };
+
+        // Tambahkan ke daftar bookings jika belum ada
+        setBookings(prev => {
+          if (!prev.some(b => b.transactionId === parsedData.transactionId)) {
+            return [newBooking, ...prev];
+          }
+          return prev;
+        });
+      } catch (error) {
+        console.error('Error parsing booking data:', error);
+      }
+    }
+  }, []);
+
+  const handleCancelBooking = async (bookingId: string) => {
+    // Konfirmasi pembatalan dari pengguna
+    if (!window.confirm('Apakah Anda yakin ingin membatalkan pemesanan ini? Tiket yang sudah dibatalkan tidak dapat dikembalikan.')) {
+      return;
+    }
+
+    try {
+      setCancelLoading(bookingId);
+      setCancelError(null);
+      setCancelSuccess(null);
+
+      // Mendapatkan token user dari localStorage
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        throw new Error('User tidak terautentikasi');
+      }
+
+      // Memanggil API untuk membatalkan pesanan
+      const response = await axios.put(`${API_URL}/${bookingId}/cancel`, {}, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.data.success) {
+        // Update status booking di state
+        setBookings(prevBookings => 
+          prevBookings.map(booking => 
+            booking.id === bookingId 
+              ? { ...booking, status: 'cancelled' } 
+              : booking
+          )
+        );
+        setCancelSuccess(bookingId);
+        
+        // Tampilkan modal sukses
+        setModalType('success');
+        setModalMessage('Pemesanan berhasil dibatalkan');
+        setShowModal(true);
+        
+        // Refresh data
+        fetchBookings();
+      } else {
+        throw new Error(response.data.message || 'Gagal membatalkan pemesanan');
+      }
+    } catch (err) {
+      console.error('Error cancelling booking:', err);
+      
+      let errorMessage = 'Gagal membatalkan pemesanan';
+      
+      if (axios.isAxiosError(err) && err.response) {
+        errorMessage = err.response.data.message || errorMessage;
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      
+      setCancelError(errorMessage);
+      
+      // Tampilkan modal error
+      setModalType('error');
+      setModalMessage(errorMessage);
+      setShowModal(true);
+    } finally {
+      setCancelLoading(null);
+    }
+  };
+
+  // Filter bookings by status and search term
+  const filteredBookings = bookings
+    .filter(booking =>
+      filterStatus === 'all' || booking.status === filterStatus
+    )
+    .filter(booking =>
+      booking.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      booking.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      booking.transactionId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (booking.promoCode && booking.promoCode.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+
+  // Format booking status for display
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'active':
+        return (
+          <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+            Active
+          </span>
+        );
+      case 'completed':
+        return (
+          <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+            Completed
+          </span>
+        );
+      case 'cancelled':
+        return (
+          <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">
+            Cancelled
+          </span>
+        );
+      default:
+        return (
+          <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">
+            {status}
+          </span>
+        );
+    }
+  };
+
+  if (loading) {
+    return (
+      <main className="bg-secondary min-h-screen">
+        <Navbar />
+        <div className="max-w-6xl mx-auto px-4 py-16 md:py-28 flex justify-center items-center">
+          <div className="text-center">
+            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p>Loading booking data...</p>
+          </div>
+        </div>
+        <Footer />
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="bg-secondary min-h-screen">
+        <Navbar />
+        <div className="max-w-6xl mx-auto px-4 py-16 md:py-28 flex justify-center items-center">
+          <div className="text-center">
+            <div className="text-red-500 mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-semibold mb-2">Error Loading Bookings</h2>
+            <p className="text-gray-600 mb-6">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-primary text-white px-6 py-2 rounded-full inline-block"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+        <Footer />
+      </main>
+    );
+  }
+
+  return (
+    <main className="bg-secondary min-h-screen">
+      <Navbar />
+      <div className="max-w-6xl mx-auto px-4 py-16 md:py-28">
+        <h1 className="text-2xl md:text-3xl font-bold mb-8">My Bookings</h1>
+
+        {/* Modal Pop-up */}
+        {showModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+              <div className="text-center mb-4">
+                {modalType === 'success' ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )}
+              </div>
+              <h2 className="text-xl font-semibold mb-2 text-center">
+                {modalType === 'success' ? 'Berhasil' : 'Gagal'}
+              </h2>
+              <p className="text-gray-600 mb-6 text-center">{modalMessage}</p>
+              <div className="text-center">
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="bg-primary text-white px-6 py-2 rounded-full inline-block"
+                >
+                  Tutup
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Bookings List */}
+        <div className="space-y-6">
+          {filteredBookings.length === 0 ? (
+            <div className="bg-white p-6 rounded-lg shadow-md text-center">
+              <div className="flex justify-center mb-4">
+                <FaTicketAlt className="text-gray-400 text-5xl" />
+              </div>
+              <h2 className="text-xl font-semibold mb-2">No bookings found</h2>
+              <p className="text-gray-600 mb-6">
+                {searchTerm || filterStatus !== 'all'
+                  ? 'No bookings match your filters.'
+                  : 'You don\'t have any ticket bookings yet.'}
+              </p>
+              <Link to="/event" className="bg-primary text-white px-6 py-2 rounded-full inline-block">
+                Explore Events
+              </Link>
+            </div>
+          ) : (
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+              {filteredBookings.map((booking) => (
+                <div key={booking.id} className="bg-primary rounded-lg shadow-md overflow-hidden">
+                  <div className="p-4 md:p-6">
+                    <div className="flex flex-col md:flex-row gap-4">
+                      {/* Event Image */}
+                      <div className="md:w-56 h-96 md:h-auto flex-shrink-0">
+                        <img
+                          src={`http://localhost:5000/uploads/images/${booking.eventImage}`}
+                          alt={booking.eventName}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                      </div>
+
+                      {/* Main Information */}
+                      <div className="flex-grow">
+                        <div className="flex flex-col md:flex-row justify-between mb-4">
+                          <div>
+                            <h3 className="text-xl font-bold mb-2 text-secondary">{booking.eventName}</h3>
+                            <div className="mb-2">{getStatusLabel(booking.status)}</div>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 space-y-3">
+                          <div className="flex items-center gap-3 text-sm">
+                            <FaMapMarkerAlt className="text-secondary w-4 h-4" />
+                            <span className='text-secondary'>{booking.location}</span>
+                          </div>
+
+                          <div className="flex items-center gap-3 text-sm">
+                            <FaCalendarAlt className="text-secondary w-4 h-4" />
+                            <span className='text-secondary'>{booking.date}</span>
+                          </div>
+
+                          <div className="flex items-center gap-3 text-sm">
+                            <FaClock className="text-secondary w-4 h-4" />
+                            <span className='text-secondary'>{booking.time}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex mt-3 justify-between items-start mb-2 py-3 border-t border-secondary">
+                          <div className='flex items-center gap-2'>
+                            <div className='w-10 h-10 bg-white rounded-sm flex items-center justify-center text-primary text-sm'>{booking.seats.length}</div>
+                            <div className='flex flex-col gap-1'>
+                              <div className='text-sm font-bold text-secondary'>{booking.ticketType}</div>
+                              <div className='text-xs text-secondary'>{booking.seats.join(', ')}</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-4">
+                          {booking.status === 'active' && (
+                            <button 
+                              className="w-full text-white px-4 py-2 rounded-full bg-red-500 hover:bg-red-600"
+                              onClick={() => handleCancelBooking(booking.id)}
+                              disabled={cancelLoading === booking.id}
+                            >
+                              {cancelLoading === booking.id ? 'Processing...' : 'Cancel'}
+                            </button>
+                          )}
+                          <div className="mt-2 text-sm text-secondary">
+                            <p>* Tickets are non-refundable</p>
+                            <p>* Ticket cancellation can only be done 7 days before the event</p>
+                          </div>
+                        </div>
+
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+      <Footer />
+    </main>
+  );
+} 

@@ -9,4 +9,5 @@ export default [
     route("event/:id/book", "routes/event.$id.book.tsx"), // book event
     route("event/:id/payment", "routes/event.$id.payment.tsx"), // payment
     route("event/:id", "routes/event.tsx"), // event detail
+    route("my-bookings", "routes/my-bookings.tsx"), // my booking
 ] satisfies RouteConfig;

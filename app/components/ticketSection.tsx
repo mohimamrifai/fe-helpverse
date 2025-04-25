@@ -3,22 +3,6 @@ import { FaChevronLeft, FaChevronRight, FaMapMarkerAlt, FaCalendarAlt, FaClock }
 import { Link } from "react-router";
 import { useEventList } from "../hooks/useEvent";
 
-// Definisi tipe lokal jika impor dari services/event bermasalah
-interface Event {
-  id: string;
-  _id: string;
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  venue: string;
-  address: string;
-  category: string;
-  image: string;
-  totalSeats: number;
-  availableSeats: number;
-}
-
 export function TicketSection() {
     const [currentIndex, setCurrentIndex] = useState(0);
     const carouselRef = useRef<HTMLDivElement>(null);
@@ -105,23 +89,17 @@ export function TicketSection() {
         );
     }
 
-    // Menambahkan URL default jika image tidak lengkap
-    const getImageUrl = (image: string) => {
-        if (image.startsWith('http')) return image;
-        return `/${image}`;
-    };
-
     // Format tanggal ke format yang lebih mudah dibaca
-    const formatDate = (dateString: string) => {
+    const formatDate = (dateString: string | Date) => {
         try {
-            const date = new Date(dateString);
+            const date = dateString instanceof Date ? dateString : new Date(dateString);
             return date.toLocaleDateString('id-ID', { 
                 day: 'numeric', 
                 month: 'long', 
                 year: 'numeric' 
             });
         } catch (e) {
-            return dateString;
+            return String(dateString);
         }
     };
 
@@ -149,12 +127,12 @@ export function TicketSection() {
                             className="md:w-[250px] md:h-[450px] h-[450px] w-[250px] rounded-md overflow-hidden flex-shrink-0 mx-2 transition-all duration-300 relative group"
                         >
                             <img 
-                                src={getImageUrl(event.image)} 
-                                alt={event.title || "Gambar event"} 
+                                src={`http://localhost:5000/uploads/images/${event.image}`} 
+                                alt={event.name || "Gambar event"} 
                                 className="w-full h-full object-cover" 
                             />
                             <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
-                                <h3 className="text-white font-bold text-lg">{event.title}</h3>
+                                <h3 className="text-white font-bold text-lg">{event.name}</h3>
                                 <div className="flex items-center text-white text-xs mt-1">
                                     <FaCalendarAlt className="mr-1" />
                                     <span>{formatDate(event.date)}</span>
@@ -165,7 +143,7 @@ export function TicketSection() {
                                 </div>
                                 <div className="flex items-center text-white text-xs mt-1">
                                     <FaMapMarkerAlt className="mr-1" />
-                                    <span>{event.venue}</span>
+                                    <span>{event.location}</span>
                                 </div>
                             </div>
                         </Link>

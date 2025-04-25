@@ -1,982 +1,312 @@
-# HELPVerse API Documentation
+# HelpVerse - Web Ticketing Platform API
 
-## Overview
+## Deskripsi Proyek
+HelpVerse adalah platform ticketing event yang memungkinkan event organizer untuk membuat dan mempublikasikan event, serta memungkinkan pengguna untuk membeli tiket event secara online.
 
-This document provides comprehensive documentation for the HELPVerse API, a RESTful backend service for event management and ticketing system built with Node.js, Express, and MongoDB.
+## Teknologi Stack
+- **Backend**: Node.js dengan Express.js
+- **Database**: MongoDB dengan Mongoose sebagai ODM
+- **Package Manager**: pnpm
+- **Language**: TypeScript
+- **Authentication**: JWT (JSON Web Token)
 
-## Base URL
-
+## Struktur Proyek
 ```
-http://localhost:5000
+helpverse/
+├── src/
+│   ├── config/          # Konfigurasi aplikasi dan database
+│   ├── controllers/     # Business logic
+│   ├── middlewares/     # Middleware untuk auth, validasi, dll
+│   ├── models/          # Schema dan model database
+│   ├── routes/          # API endpoints
+│   ├── services/        # Logika bisnis kompleks
+│   ├── utils/           # Helper functions
+│   ├── seeders/         # Data seeders
+│   ├── types/           # TypeScript type definitions
+│   ├── validators/      # Request validation
+│   └── app.ts           # Entry point aplikasi
+├── .env                 # Environment variables
+├── tsconfig.json        # TypeScript configuration
+├── package.json         # Dependencies dan scripts
+└── README.md            # Dokumentasi proyek
 ```
 
-## Authentication
+## Role Pengguna
+HelpVerse memiliki 3 role pengguna utama:
+1. **User** - Pengguna biasa yang dapat melihat dan membeli tiket event
+2. **Event Organizer** - Dapat membuat dan mengelola event mereka sendiri
+3. **Admin** - Memiliki akses penuh untuk mengelola semua data dan melakukan approval event
 
-The API uses JSON Web Tokens (JWT) for authentication. Tokens are obtained through the login endpoint and should be included in the `Authorization` header as a Bearer token for protected endpoints.
+## Model Data
 
-Example:
-```
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
-
-## Response Format
-
-All API responses follow a consistent format:
-
-### Success Response
-```json
+### User Model
+```typescript
 {
-  "success": true,
-  "data": { ... }
+  username: string;         // Unique username
+  email: string;            // Unique email address
+  password: string;         // Hashed password
+  fullName: string;         // User's full name
+  phone: string;            // Contact number
+  organizerName?: string;   // Required for event organizers
+  role: "user" | "eventOrganizer" | "admin";
+  createdAt: Date;
+  updatedAt: Date;
 }
 ```
 
-### Error Response
-```json
+### Event Model
+```typescript
 {
-  "success": false,
-  "message": "Pesan error dalam bahasa Indonesia"
+  name: string;             // Event name
+  description: string;      // Detailed event description
+  date: Date;               // Event date
+  time: string;             // Start time
+  location: string;         // Physical location
+  image: string;            // Event cover image URL
+  tickets: [Ticket];        // Array of ticket types
+  totalSeats: number;       // Total capacity
+  availableSeats: number;   // Remaining seats
+  promotionalOffers: [Offer]; // Special discounts
+  tags: [string];           // Event tags for search
+  createdBy: User;          // Reference to organizer
+  createdAt: Date;
+  updatedAt: Date;
 }
 ```
 
-## Role-Based Authorization
+### Ticket Model
+```typescript
+{
+  name: string;             // Ticket type name
+  description: string;      // Ticket description
+  price: number;            // Price in currency
+  quantity: number;         // Total available
+  startDate: Date;          // Sales start date
+  endDate: Date;            // Sales end date
+  seatArrangement: {
+    rows: number;
+    columns: number;
+  };
+  bookedSeats: [{           // Tracking which seats are taken
+    row: number;
+    column: number;
+    bookingId: string;
+  }];
+}
+```
 
-The system implements three user roles with different permissions:
-
-1. **Admin**: Full access to all endpoints
-2. **Event Organizer**: Can create and manage their own events
-3. **User**: Can browse events and make bookings
+### Order Model
+```typescript
+{
+  user: User;               // Reference to buyer
+  event: Event;             // Reference to event
+  tickets: [{
+    ticketType: string;     // Reference to ticket type
+    quantity: number;       // Number of tickets
+    seats: [{row: number, column: number}]; // Selected seats
+    price: number;          // Price at purchase time
+  }];
+  totalAmount: number;      // Total amount paid
+  discount: number;         // Discount applied if any
+  promoCode?: string;       // Promo code used if any
+  status: ""confirmed";
+  paymentInfo: {
+    method: string;
+    transactionId: string;
+    paidAt: Date;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
 
 ## API Endpoints
 
 ### Authentication
-
-#### Login
-
-**Endpoint:** `POST /api/auth/login`
-
-**Description:** Authenticate user and receive JWT token
-
-**Request Body:**
-```json
-{
-  "email": "string",
-  "password": "string",
-  "rememberMe": boolean
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "token": "JWT_TOKEN_HERE",
-  "data": {
-    "id": "user_id",
-    "username": "string",
-    "fullName": "string",
-    "email": "string",
-    "role": "admin" | "eventOrganizer" | "user"
-  }
-}
-```
-
-#### Register Event Organizer
-
-**Endpoint:** `POST /api/auth/register`
-
-**Description:** Register a new event organizer account
-
-**Request Body:**
-```json
-{
-  "username": "string",
-  "fullName": "string",
-  "email": "string",
-  "password": "string",
-  "role": "eventOrganizer",
-  "phone": "string",
-  "organizationName": "string",
-  "agreeTerms": true
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "token": "JWT_TOKEN_HERE",
-  "data": {
-    "id": "user_id",
-    "username": "string",
-    "fullName": "string",
-    "role": "eventOrganizer"
-  }
-}
-```
-
-#### Get Current User
-
-**Endpoint:** `GET /api/auth/me`
-
-**Description:** Get the current authenticated user's details
-
-**Authentication:** Required
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "user_id",
-    "username": "string",
-    "fullName": "string",
-    "email": "string",
-    "role": "admin" | "eventOrganizer" | "user",
-    "phone": "string",
-    "organizationName": "string"
-  }
-}
-```
-
-#### Logout
-
-**Endpoint:** `GET /api/auth/logout`
-
-**Description:** Logout the current user
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Anda berhasil keluar dari sistem"
-}
-```
+- `POST /api/auth/register` - Register user
+- `POST /api/auth/register/event-organizer` - Register event organizer
+- `POST /api/auth/login` - Login user (menggunakan username atau email)
+- `GET /api/auth/logout` - Logout user
+- `GET /api/auth/me` - Get current user profile
 
 ### Events
+- `GET /api/events` - Get all published events with pagination & filtering
+- `GET /api/events/:id` - Get detailed event information
+- `POST /api/events` - Create new event (Event Organizer/Admin)
+- `PUT /api/events/:id` - Update event (Owner/Admin)
+- `DELETE /api/events/:id` - Delete event (Owner/Admin)
 
-#### Get All Events
+### Tickets
+- `GET /api/events/:id/tickets` - Get available tickets for event
+- `GET /api/events/:id/tickets/:ticketId/seats` - Get seat availability
 
-**Endpoint:** `GET /api/events`
+### Orders
+- `POST /api/orders` - Create new order/booking
+- `GET /api/orders` - Get user's orders
+- `GET /api/orders/:id` - Get order details
+- `PUT /api/orders/:id/cancel` - Cancel order
 
-**Description:** Retrieve a list of all events
+#### Order Request Format
+Berikut adalah format JSON yang diharapkan untuk membuat pemesanan tiket baru:
 
-**Query Parameters:**
-- `page`: number (default: 1)
-- `limit`: number (default: 10)
-- `search`: string (optional)
-- `sort`: string (comma-separated fields, prefix with - for descending order)
-- `select`: string (comma-separated fields to include)
-
-**Response:**
 ```json
 {
-  "success": true,
-  "count": number,
-  "pagination": {
-    "next": { "page": number, "limit": number },
-    "prev": { "page": number, "limit": number }
-  },
-  "data": [
+  "eventId": "string",           // ID event yang akan dipesan (MongoDB ObjectId)
+  "tickets": [                   // Array tiket yang dipesan
     {
-      "id": "string",
-      "name": "string",
-      "description": "string",
-      "date": "string",
-      "time": "string",
-      "location": "string",
-      "image": "string",
-      "totalSeats": number,
-      "availableSeats": number,
-      "published": boolean,
-      "approvalStatus": "pending" | "approved" | "rejected",
-      "approvalNotes": "string",
-      "createdAt": "date",
-      "organizer": {
-        "id": "string",
-        "name": "string",
-        "email": "string"
-      },
-      "ticketTypes": [
+      "ticketType": "string",    // Nama jenis tiket (contoh: "VIP", "Regular", "Economy")
+      "quantity": number,        // Jumlah tiket yang dipesan
+      "seats": [                 // Array kursi yang dipilih (opsional jika event menggunakan seat arrangement)
         {
-          "id": "string",
-          "name": "string",
-          "description": "string",
-          "price": number,
-          "formattedPrice": "RM XX.XX",
-          "category": "string",
-          "available": number,
-          "quantity": number,
-          "maxPerOrder": number
-        }
-      ],
-      "promotionalOffers": [
-        {
-          "code": "string",
-          "discountType": "percentage" | "fixed",
-          "discountValue": number,
-          "maxUses": number,
-          "currentUses": number,
-          "validFrom": "date",
-          "validUntil": "date",
-          "active": boolean
+          "row": number,         // Nomor baris kursi
+          "column": number       // Nomor kolom kursi
         }
       ]
     }
-  ]
-}
-```
-
-#### Get Event Detail
-
-**Endpoint:** `GET /api/events/:id`
-
-**Description:** Get details of a specific event
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "string",
-    "name": "string",
-    "description": "string",
-    "date": "string",
-    "time": "string",
-    "location": "string",
-    "image": "string",
-    "totalSeats": number,
-    "availableSeats": number,
-    "published": boolean,
-    "approvalStatus": "pending" | "approved" | "rejected",
-    "approvalNotes": "string",
-    "createdAt": "date",
-    "organizer": {
-      "id": "string",
-      "name": "string",
-      "email": "string"
-    },
-    "ticketTypes": [
-      {
-        "id": "string",
-        "name": "string",
-        "description": "string",
-        "price": number,
-        "formattedPrice": "RM XX.XX",
-        "category": "string",
-        "available": number,
-        "quantity": number,
-        "maxPerOrder": number
-      }
-    ],
-    "seatArrangement": {
-      "rows": number,
-      "columns": number,
-      "seats": [
-        {
-          "id": "string",
-          "status": "available" | "reserved" | "selected",
-          "price": number
-        }
-      ]
-    },
-    "bookings": [
-      {
-        "id": "string",
-        "user": "string",
-        "totalAmount": number,
-        "paymentStatus": "pending" | "completed" | "refunded" | "failed",
-        "bookingStatus": "pending" | "confirmed" | "cancelled",
-        "bookingDate": "date",
-        "createdAt": "date"
-      }
-    ],
-    "promotionalOffers": [
-      {
-        "code": "string",
-        "discountType": "percentage" | "fixed",
-        "discountValue": number,
-        "maxUses": number,
-        "currentUses": number,
-        "validFrom": "date",
-        "validUntil": "date",
-        "active": boolean
-      }
-    ]
+  ],
+  "promoCode": "string",         // Kode promo (opsional)
+  "paymentInfo": {               // Informasi pembayaran
+    "method": "string",          // Metode pembayaran (contoh: "credit_card", "paypal", dll)
+    "transactionId": "string"    // ID transaksi pembayaran
   }
 }
 ```
 
-#### Create Event (Event Organizer only)
+Catatan penting:
+- `eventId`: Wajib ada dan harus berupa MongoDB ObjectId yang valid
+- `tickets`: Wajib berupa array dengan minimal satu item
+- Jika `seats` disertakan, jumlah kursi yang dipilih harus sama dengan `quantity`
+- `paymentInfo` wajib diisi untuk memproses pembayaran
 
-**Endpoint:** `POST /api/events`
+### Upload
+- `POST /api/uploads/image` - Upload gambar (perlu autentikasi)
+- `DELETE /api/uploads/image` - Hapus gambar (perlu autentikasi)
 
-**Description:** Create a new event
+### Admin
+- `GET /api/admin/events` - Get all events (including unpublished)
+- `GET /api/admin/users` - Get all users
+- `PUT /api/admin/users/:id/role` - Update user role
+- `GET /api/admin/orders` - Get all orders
+- `GET /api/admin/stats` - Get platform statistics
 
-**Authentication:** Required (Event Organizer only)
+## Format Login Request
+Untuk login, API mendukung dua format:
 
-**Request Body:**
+### Format Baru (menggunakan identifier):
 ```json
 {
-  "name": "string",
-  "description": "string",
-  "date": "string",
-  "time": "string",
-  "location": "string",
-  "capacity": number,
-  "image": "string",
-  "seatArrangement": {
-    "rows": number,
-    "columns": number,
-    "seats": [
-      {
-        "id": "string",
-        "status": "available",
-        "price": number
+  "identifier": "username_atau_email@example.com",
+  "password": "password123"
+}
+```
+
+### Format Lama (menggunakan email):
+```json
+{
+  "email": "email@example.com",
+  "password": "password123"
+}
+```
+
+## Data Seeders
+Aplikasi harus menyediakan data seeders untuk:
+1. Admin account
+2. Event Organizer account
+3. Regular User account
+4. Sample Events
+5. Sample Promotional Offers
+
+## Fitur Keamanan & Validasi
+- Password hashing menggunakan bcrypt
+- JWT authentication dengan refresh token
+- Input validation menggunakan Joi/Express Validator
+- Rate limiting untuk mencegah brute force attacks
+- CORS configuration sesuai dengan CLIENT_URL di .env
+
+## Tugas Prioritas
+1. Setup project structure dan environment
+2. Implementasi authentication dan user management
+3. Implementasi CRUD operations untuk events
+5. Implementasi ticket & seat management
+6. Implementasi order & booking system
+
+## Contoh Event Data
+```javascript
+{
+  name: 'Tech Conference 2025',
+  description: 'The premier tech event in Asia featuring talks from industry giants, workshops on emerging technologies, and networking opportunities. Topics include AI, blockchain, cloud computing, and digital transformation strategies.',
+  date: '2025-05-01',
+  time: '09:00:00',
+  location: 'Kuala Lumpur Convention Centre, 50088 Kuala Lumpur',
+  image: 'http://localhost:5173/event-1.png',
+  tickets: [
+    {
+      name: 'VIP',
+      description: 'VIP ticket for Tech Conference 2025',
+      price: 100,
+      quantity: 50,
+      endDate: '2025-05-01',
+      startDate: '2025-04-01',
+      status: 'active',
+      seatArrangement: {
+        rows: 5,
+        columns: 10,
       }
-    ]
+    },
+    {
+      name: 'Regular',
+      description: 'Regular ticket for Tech Conference 2025', 
+      price: 50,
+      quantity: 80,
+      endDate: '2025-05-01',
+      startDate: '2025-04-01',
+      status: 'active',
+      seatArrangement: {
+        rows: 8,
+        columns: 10,
+      }
+    },
+    {
+      name: 'Economy',
+      description: 'Economy ticket for Tech Conference 2025',
+      price: 25,
+      quantity: 100,
+      endDate: '2025-05-01',
+      startDate: '2025-04-01',
+      status: 'active',
+      seatArrangement: {
+        rows: 10,
+        columns: 10,
+      }
+    }
+  ],
+  totalSeats: 230,
+  availableSeats: 230,
+  published: true,
+  approvalStatus: 'approved',
+  tags: ['tech', 'conference', 'networking'],
+  promotionalOffers: [
+    {
+      name: 'Early Bird',
+      description: 'Early Bird ticket for Tech Conference 2025',
+      code: 'EARLYBIRD',
+      discountType: 'percentage',
+      discountValue: 25,
+      maxUses: 100,
+      currentUses: 0,
+      validFrom: '2025-04-01',
+      validUntil: '2025-04-15',
+      active: true
+    }
+  ],
+  createdBy: {
+    username: 'eventorganizer1',
+    fullName: 'Event Organizer 1',
+    email: 'eventorganizer1@malaysiaevents.com',
+    phone: '0123456790',
+    role: 'eventOrganizer'
   },
-  "ticketTypes": [
-    {
-      "name": "string",
-      "price": number,
-      "category": "string",
-      "description": "string",
-      "quantity": number,
-      "maxPerOrder": number
-    }
-  ]
+  createdAt: new Date(),
+  updatedAt: new Date()
 }
 ```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Acara berhasil dibuat",
-  "data": {
-    "id": "string",
-    "name": "string",
-    "description": "string",
-    "date": "string",
-    "time": "string",
-    "location": "string",
-    "totalSeats": number,
-    "availableSeats": number,
-    "organizer": "string",
-    "published": boolean,
-    "approvalStatus": "pending",
-    "createdAt": "date"
-  }
-}
-```
-
-### Bookings
-
-#### Get Single Booking
-
-**Endpoint:** `GET /api/bookings/:id`
-
-**Description:** Get details of a specific booking
-
-**Authentication:** Required (User who made booking, Event Organizer, or Admin)
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "string",
-    "user": {
-      "id": "string",
-      "username": "string",
-      "fullName": "string",
-      "email": "string",
-      "phone": "string"
-    },
-    "event": {
-      "id": "string",
-      "name": "string",
-      "description": "string",
-      "location": "string",
-      "date": "string",
-      "time": "string",
-      "organizer": {
-        "id": "string",
-        "name": "string",
-        "email": "string"
-      }
-    },
-    "tickets": [
-      {
-        "ticket": {
-          "id": "string",
-          "name": "string",
-          "price": number,
-          "category": "string",
-          "description": "string",
-          "formattedPrice": "RM XX.XX"
-        },
-        "quantity": number,
-        "price": number,
-        "formattedPrice": "RM XX.XX"
-      }
-    ],
-    "seats": [
-      {
-        "id": "string",
-        "status": "booked",
-        "price": number
-      }
-    ],
-    "totalAmount": number,
-    "formattedTotalAmount": "RM XX.XX",
-    "paymentMethod": "credit_card" | "bank_transfer" | "paypal" | "e-wallet" | "debit_card",
-    "paymentStatus": "pending" | "completed" | "refunded" | "failed",
-    "bookingStatus": "pending" | "confirmed" | "cancelled",
-    "transactionId": "string",
-    "bookingDate": "date",
-    "createdAt": "date"
-  }
-}
-```
-
-#### Create Booking
-
-**Endpoint:** `POST /api/bookings`
-
-**Description:** Create a new booking for an event
-
-**Authentication:** Required
-
-**Request Body:**
-```json
-{
-  "event": "string (event_id)",
-  "tickets": [
-    {
-      "ticketType": "string (ticket_id)",
-      "quantity": number
-    }
-  ],
-  "seats": [
-    {
-      "id": "string (seat_id)"
-    }
-  ],
-  "paymentMethod": "credit_card" | "bank_transfer" | "paypal" | "e-wallet" | "debit_card"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Pemesanan berhasil dibuat",
-  "data": {
-    "id": "string",
-    "user": "string (user_id)",
-    "event": "string (event_id)",
-    "tickets": [
-      {
-        "ticketType": "string (ticket_id)",
-        "quantity": number,
-        "price": number
-      }
-    ],
-    "seats": [
-      {
-        "id": "string",
-        "status": "booked",
-        "price": number
-      }
-    ],
-    "totalAmount": number,
-    "paymentMethod": "string",
-    "paymentStatus": "pending",
-    "bookingStatus": "pending",
-    "transactionId": "string",
-    "bookingDate": "date",
-    "createdAt": "date"
-  }
-}
-```
-
-#### Get User Bookings
-
-**Endpoint:** `GET /api/bookings/user/:userId`
-
-**Description:** Get all bookings for a specific user
-
-**Authentication:** Required (User who made bookings or Admin)
-
-**Response:**
-```json
-{
-  "success": true,
-  "count": number,
-  "data": [
-    {
-      "id": "string",
-      "event": {
-        "id": "string",
-        "name": "string",
-        "description": "string",
-        "location": "string",
-        "date": "string",
-        "time": "string",
-        "image": "string",
-        "organizer": {
-          "id": "string",
-          "name": "string",
-          "email": "string"
-        }
-      },
-      "tickets": [
-        {
-          "ticket": {
-            "id": "string",
-            "name": "string",
-            "price": number,
-            "category": "string",
-            "description": "string",
-            "formattedPrice": "RM XX.XX"
-          },
-          "quantity": number,
-          "price": number,
-          "formattedPrice": "RM XX.XX"
-        }
-      ],
-      "seats": [
-        {
-          "id": "string",
-          "row": "string",
-          "seatNumber": "string",
-          "status": "booked",
-          "price": number
-        }
-      ],
-      "totalAmount": number,
-      "formattedTotalAmount": "RM XX.XX",
-      "paymentMethod": "credit_card" | "bank_transfer" | "paypal" | "e-wallet" | "debit_card",
-      "paymentStatus": "pending" | "completed" | "refunded" | "failed",
-      "bookingStatus": "pending" | "confirmed" | "cancelled",
-      "transactionId": "string",
-      "bookingDate": "date",
-      "createdAt": "date"
-    }
-  ]
-}
-```
-
-#### Get Event Bookings
-
-**Endpoint:** `GET /api/bookings/event/:eventId`
-
-**Description:** Get all bookings for a specific event
-
-**Authentication:** Required (Event Organizer who created the event or Admin)
-
-**Response:**
-```json
-{
-  "success": true,
-  "count": number,
-  "data": [
-    {
-      "id": "string",
-      "user": {
-        "id": "string",
-        "name": "string",
-        "email": "string",
-        "phone": "string"
-      },
-      "tickets": [
-        {
-          "ticket": {
-            "id": "string",
-            "name": "string",
-            "price": number,
-            "category": "string",
-            "description": "string",
-            "formattedPrice": "RM XX.XX"
-          },
-          "quantity": number,
-          "price": number,
-          "formattedPrice": "RM XX.XX"
-        }
-      ],
-      "seats": [
-        {
-          "id": "string",
-          "row": "string",
-          "seatNumber": "string",
-          "section": "string",
-          "status": "booked",
-          "price": number
-        }
-      ],
-      "totalAmount": number,
-      "formattedTotalAmount": "RM XX.XX",
-      "paymentMethod": "credit_card" | "bank_transfer" | "paypal" | "e-wallet" | "debit_card",
-      "paymentStatus": "pending" | "completed" | "refunded" | "failed",
-      "bookingStatus": "pending" | "confirmed" | "cancelled",
-      "transactionId": "string",
-      "bookingDate": "date",
-      "createdAt": "date"
-    }
-  ]
-}
-```
-
-### Seats
-
-#### Get Seats
-
-**Endpoint:** `GET /api/seats`
-
-**Description:** Get all seats with optional filtering
-
-**Query Parameters:**
-- `event`: string (Event ID to filter by)
-- `ticketType`: string (Ticket Type ID to filter by)
-- `status`: string (Status to filter by: 'available', 'reserved', 'booked')
-
-**Response:**
-```json
-{
-  "success": true,
-  "count": number,
-  "data": [
-    {
-      "id": "string",
-      "seatNumber": "string",
-      "section": "string",
-      "row": "string",
-      "status": "available" | "reserved" | "booked",
-      "price": number,
-      "formattedPrice": "RM XX.XX",
-      "ticketType": {
-        "id": "string",
-        "name": "string",
-        "category": "string",
-        "price": number
-      },
-      "event": "string",
-      "booking": "string",
-      "createdAt": "date"
-    }
-  ]
-}
-```
-
-#### Get Single Seat
-
-**Endpoint:** `GET /api/seats/:id`
-
-**Description:** Get details of a specific seat
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "string",
-    "seatNumber": "string",
-    "section": "string",
-    "row": "string",
-    "status": "available" | "reserved" | "booked",
-    "price": number,
-    "formattedPrice": "RM XX.XX",
-    "ticketType": {
-      "id": "string",
-      "name": "string",
-      "category": "string",
-      "price": number
-    },
-    "event": {
-      "id": "string",
-      "title": "string",
-      "date": "string",
-      "venue": "string"
-    },
-    "booking": "string",
-    "createdAt": "date"
-  }
-}
-```
-
-#### Create Seat
-
-**Endpoint:** `POST /api/seats`
-
-**Description:** Create a new seat
-
-**Authentication:** Required (Admin or Event Organizer)
-
-**Request Body:**
-```json
-{
-  "seatNumber": "string",
-  "section": "string",
-  "row": "string",
-  "status": "available",
-  "price": number,
-  "ticketType": "string",
-  "event": "string"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Kursi berhasil dibuat",
-  "data": {
-    "id": "string",
-    "seatNumber": "string",
-    "section": "string",
-    "row": "string",
-    "status": "available",
-    "price": number,
-    "ticketType": "string",
-    "event": "string",
-    "createdAt": "date"
-  }
-}
-```
-
-#### Create Bulk Seats
-
-**Endpoint:** `POST /api/seats/bulk`
-
-**Description:** Create multiple seats at once
-
-**Authentication:** Required (Admin or Event Organizer)
-
-**Request Body:**
-```json
-{
-  "event": "string",
-  "ticketType": "string",
-  "section": "string",
-  "rows": "A-E" | ["A", "B", "C"] | "A",
-  "seatsPerRow": number,
-  "basePrice": number,
-  "seatNumbering": "alpha" | "numeric"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "count": number,
-  "message": "string",
-  "data": {
-    "section": "string",
-    "rows": ["string"],
-    "seatsPerRow": number,
-    "totalSeats": number
-  }
-}
-```
-
-#### Update Seat
-
-**Endpoint:** `PUT /api/seats/:id`
-
-**Description:** Update a seat's information
-
-**Authentication:** Required (Admin or Event Organizer)
-
-**Request Body:**
-```json
-{
-  "status": "available" | "reserved" | "booked",
-  "price": number
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Kursi berhasil diupdate",
-  "data": {
-    "id": "string",
-    "seatNumber": "string",
-    "section": "string",
-    "row": "string",
-    "status": "string",
-    "price": number,
-    "ticketType": "string",
-    "event": "string",
-    "booking": "string",
-    "createdAt": "date"
-  }
-}
-```
-
-### Error Responses
-
-All API endpoints may return the following error responses:
-
-```json
-{
-  "statusCode": number,
-  "message": "string",
-  "error": "string"
-}
-```
-
-Common status codes:
-- 400: Bad Request
-- 401: Unauthorized
-- 403: Forbidden
-- 404: Not Found
-- 500: Internal Server Error
-
-## Data Models
-
-### User
-- `id`: String (MongoDB ObjectId)
-- `name`: String
-- `email`: String (unique)
-- `phone`: String
-- `password`: String (hashed)
-- `role`: String (admin | event_organizer | user)
-- `organizationName`: String (untuk event_organizer)
-- `createdAt`: Date
-
-### Event
-- `id`: String (MongoDB ObjectId)
-- `name`: String
-- `description`: String
-- `date`: String
-- `time`: String
-- `location`: String
-- `image`: String
-- `totalSeats`: Number
-- `availableSeats`: Number
-- `published`: Boolean
-- `approvalStatus`: String (pending | approved | rejected)
-- `approvalNotes`: String
-- `ticketTypes`: Array of ObjectId (ref: Ticket)
-- `seatArrangement`: {
-  - `rows`: Number
-  - `columns`: Number
-  - `seats`: Array of {
-    - `id`: String
-    - `status`: String (available | reserved | selected)
-    - `price`: Number
-  }
-}
-- `organizer`: ObjectId (ref: User)
-- `promotionalOffers`: Array of {
-  - `code`: String
-  - `discountType`: String (percentage | fixed)
-  - `discountValue`: Number
-  - `maxUses`: Number
-  - `currentUses`: Number
-  - `validFrom`: Date
-  - `validUntil`: Date
-  - `active`: Boolean
-}
-- `createdAt`: Date
-
-### Ticket
-- `id`: String (MongoDB ObjectId)
-- `name`: String
-- `description`: String
-- `price`: Number
-- `category`: String
-- `quantity`: Number
-- `available`: Number
-- `maxPerOrder`: Number
-- `event`: ObjectId (ref: Event)
-- `saleStartDate`: Date
-- `saleEndDate`: Date
-- `createdAt`: Date
-
-### Seat
-- `id`: String (MongoDB ObjectId)
-- `seatNumber`: String
-- `section`: String
-- `row`: String
-- `status`: String (available | reserved | booked)
-- `price`: Number
-- `ticketType`: ObjectId (ref: Ticket)
-- `event`: ObjectId (ref: Event)
-- `booking`: ObjectId (ref: Booking, optional)
-- `createdAt`: Date
-
-### Booking
-- `id`: String (MongoDB ObjectId)
-- `user`: ObjectId (ref: User)
-- `event`: ObjectId (ref: Event)
-- `tickets`: Array of {
-  - `ticket`: ObjectId (ref: Ticket)
-  - `quantity`: Number
-  - `price`: Number
-}
-- `seats`: Array of ObjectId (ref: Seat)
-- `totalAmount`: Number
-- `paymentMethod`: String (credit_card | bank_transfer | paypal | e-wallet | debit_card)
-- `paymentStatus`: String (pending | completed | refunded | failed)
-- `bookingStatus`: String (pending | confirmed | cancelled)
-- `transactionId`: String
-- `bookingDate`: Date
-- `createdAt`: Date
-
-## Data Seeding
-
-Untuk mempopulasi database dengan data testing, aplikasi menyediakan script seeding.
-
-### Menjalankan Seed
-
-```bash
-# Menjalankan seed data dengan npm
-npm run seed
-
-# Atau menjalankan langsung dengan node
-node seeders/seed.js
-```
-
-### Hasil Seeding
-
-Proses seeding akan membuat data berikut di database:
-
-1. **Users**:
-   - Admin (role: 'admin')
-   - Event Organizer (role: 'event_organizer')
-   - User biasa (role: 'user')
-
-2. **Events**:
-   Enam acara demo dengan detail lengkap seperti tanggal, lokasi, dan kapasitas.
-
-3. **Tickets**:
-   Setiap event memiliki tepat 3 tipe tiket:
-   - VIP: Tiket premium dengan harga tertinggi
-   - Regular: Tiket standar dengan harga menengah
-   - Economy: Tiket ekonomis dengan harga terendah
-   
-   Jumlah kursi untuk setiap tipe tiket adalah angka genap acak antara 100-300.
-
-4. **Seats**:
-   Konfigurasi tempat duduk untuk setiap tipe tiket dengan layout optimal berdasarkan jumlah kursi.
-
-5. **Bookings**:
-   Contoh pemesanan tiket dengan berbagai status (confirmed, pending, cancelled).
-
-### Kredensial Login
-
-Setelah seeding berhasil, Anda dapat menggunakan kredensial berikut untuk login:
-
-```
-Admin: amir@malaysiaevents.com / password123
-Event Organizer: nurul@malayorganizer.com / password123 
-User: razak@example.com.my / password123
-```
-
-> **Perhatian**: Menjalankan seed akan menghapus semua data yang ada di database terlebih dahulu.

@@ -4,64 +4,80 @@ import axios from 'axios';
 export interface Event {
   id: string;
   _id: string;
-  title: string;
+  name: string;           // Diubah dari title menjadi name sesuai dokumentasi
   description: string;
-  date: string;
+  date: Date;             // Diubah dari string menjadi Date
   time: string;
-  venue: string;
+  location: string;       // Diubah dari venue menjadi location
   address: string;
-  category: string;
   image: string;
   totalSeats: number;
   availableSeats: number;
-  ticketTypes: TicketType[];
-  organizer: Organizer;
+  tickets: Ticket[];      // Diubah dari ticketTypes menjadi tickets
+  createdBy: User;        // Ditambahkan sesuai dokumentasi
+  tags: string[];         // Ditambahkan sesuai dokumentasi
   published: boolean;
   approvalStatus: string;
   approvalNotes: string;
   promotionalOffers?: PromotionalOffer[];
   seatArrangement?: SeatArrangement;
-  createdAt: string;
+  createdAt: Date;        // Diubah dari string menjadi Date
+  updatedAt: Date;        // Ditambahkan sesuai dokumentasi
 }
 
 // Definisi tipe untuk tipe tiket
-export interface TicketType {
+export interface Ticket {  // Diubah nama dari TicketType menjadi Ticket
   _id: string;
   id: string;
-  name?: string;
-  description?: string;
-  price?: string;
-  category?: string;
-  available?: number;
-  total?: number;
-  maxPerOrder?: number;
-  limit?: string;
-  rows?: number;
-  columns?: number;
-  seats?: SeatInfo[];
-  buffer?: {
-    type: string;
-    data: number[];
+  name: string;
+  description: string;
+  price: number;          // Diubah dari string menjadi number
+  quantity: number;       // Diubah dari available dan total menjadi quantity
+  startDate?: Date;       // Ditambahkan sesuai dokumentasi
+  endDate?: Date;         // Ditambahkan sesuai dokumentasi
+  seatArrangement?: {
+    rows: number;
+    columns: number;
   };
+  bookedSeats?: BookedSeat[]; // Ditambahkan sesuai dokumentasi
+}
+
+// Definisi tipe untuk kursi yang sudah dipesan
+export interface BookedSeat {
+  row: number;
+  column: number;
+  bookingId: string;
 }
 
 // Definisi tipe untuk pengaturan kursi
 export interface SeatArrangement {
-  rows?: number;
-  columns?: number;
+  rows: number;
+  columns: number;
   seats: SeatInfo[];
 }
 
 // Definisi tipe untuk informasi kursi
 export interface SeatInfo {
   id: string;
-  row?: string;
-  column?: string;
+  row: string;
+  column: string;
   status: 'available' | 'reserved' | 'selected' | 'booked';
   price: number;
+  ticketTypeId?: string;
 }
 
-// Definisi tipe untuk organizer
+// Definisi tipe untuk user
+export interface User {
+  _id: string;
+  username: string;
+  email: string;
+  fullName: string;
+  phone: string;
+  organizerName?: string;
+  role: 'user' | 'eventOrganizer' | 'admin';
+}
+
+// Definisi tipe untuk organizer (deprecated - digantikan User)
 export interface Organizer {
   _id: string;
   name: string;
@@ -124,13 +140,13 @@ api.interceptors.request.use(
 
 // Adapter untuk mengubah format event
 const normalizeEvent = (eventData: any): Event => {
-  // Pastikan ticketTypes adalah array
-  const ticketTypes = Array.isArray(eventData.ticketTypes) 
-    ? eventData.ticketTypes
-    : (typeof eventData.ticketTypes === 'string' ? [eventData.ticketTypes] : []);
+  // Pastikan tickets adalah array
+  const tickets = Array.isArray(eventData.tickets) 
+    ? eventData.tickets
+    : (Array.isArray(eventData.ticketTypes) ? eventData.ticketTypes : []);
   
   // Petakan tiket untuk memastikan semua properti yang dibutuhkan ada
-  const normalizedTicketTypes = ticketTypes.map((ticket: any) => {
+  const normalizedTickets = tickets.map((ticket: any) => {
     // Jika tiket hanya berupa ID string, buat objek kosong
     if (typeof ticket === 'string') {
       return {
@@ -138,15 +154,13 @@ const normalizeEvent = (eventData: any): Event => {
         id: ticket,
         name: `Tiket ${ticket.substr(-4)}`,
         description: '',
-        price: '0',
-        category: '',
-        available: 0,
-        total: 0,
-        maxPerOrder: 10,
-        limit: '0',
-        rows: 0,
-        columns: 0,
-        seats: []
+        price: 0,
+        quantity: 0,
+        seatArrangement: {
+          rows: 0,
+          columns: 0,
+        },
+        bookedSeats: []
       };
     }
     
@@ -155,15 +169,15 @@ const normalizeEvent = (eventData: any): Event => {
       id: ticket.id || ticket._id,
       name: ticket.name || `Tiket ${(ticket._id || ticket.id).substr(-4)}`,
       description: ticket.description || '',
-      price: ticket.price?.toString() || '0',
-      category: ticket.category || '',
-      available: ticket.available || 0,
-      total: ticket.total || 0,
-      maxPerOrder: ticket.maxPerOrder || 10,
-      limit: ticket.limit || '0',
-      rows: ticket.rows || 0,
-      columns: ticket.columns || 0,
-      seats: Array.isArray(ticket.seats) ? ticket.seats : []
+      price: typeof ticket.price === 'string' ? parseFloat(ticket.price) : (ticket.price || 0),
+      quantity: ticket.quantity || ticket.available || 0,
+      startDate: ticket.startDate ? new Date(ticket.startDate) : undefined,
+      endDate: ticket.endDate ? new Date(ticket.endDate) : undefined,
+      seatArrangement: {
+        rows: ticket.rows || (ticket.seatArrangement?.rows || 0),
+        columns: ticket.columns || (ticket.seatArrangement?.columns || 0),
+      },
+      bookedSeats: Array.isArray(ticket.bookedSeats) ? ticket.bookedSeats : []
     };
   });
   
@@ -186,23 +200,33 @@ const normalizeEvent = (eventData: any): Event => {
             })
           : []
       }
-    : { seats: [] };
+    : { rows: 0, columns: 0, seats: [] };
     
+  // Buat user dari data organizer jika tidak ada
+  const user = eventData.createdBy || {
+    _id: eventData.organizer?._id || '',
+    username: '',
+    email: eventData.organizer?.email || '',
+    fullName: eventData.organizer?.name || '',
+    phone: '',
+    role: 'eventOrganizer' as const
+  };
+
   return {
     id: eventData.id || eventData._id,
     _id: eventData._id || eventData.id,
-    title: eventData.title || eventData.name,
+    name: eventData.name || eventData.title,
     description: eventData.description,
-    date: eventData.date,
+    date: new Date(eventData.date),
     time: eventData.time,
-    venue: eventData.venue || eventData.location,
+    location: eventData.location || eventData.venue,
     address: eventData.address || '',
-    category: eventData.category || '',
     image: eventData.image,
     totalSeats: eventData.totalSeats || eventData.capacity || 0,
     availableSeats: eventData.availableSeats || 0,
-    ticketTypes: normalizedTicketTypes,
-    organizer: eventData.organizer || { _id: '', name: '', email: '' },
+    tickets: normalizedTickets,
+    createdBy: user,
+    tags: Array.isArray(eventData.tags) ? eventData.tags : [],
     published: eventData.published || false,
     approvalStatus: eventData.approvalStatus || 'pending',
     approvalNotes: eventData.approvalNotes || '',
@@ -220,7 +244,8 @@ const normalizeEvent = (eventData: any): Event => {
         }))
       : [],
     seatArrangement: seatArrangement,
-    createdAt: eventData.createdAt || new Date().toISOString()
+    createdAt: new Date(eventData.createdAt || new Date()),
+    updatedAt: new Date(eventData.updatedAt || new Date())
   };
 };
 
@@ -270,11 +295,15 @@ export const eventService = {
           let totalColumns = 0;
           
           // Jika ada ticket types dengan properti rows dan columns, gunakan itu
-          if (eventData.ticketTypes && eventData.ticketTypes.length > 0) {
+          if ((eventData.tickets && eventData.tickets.length > 0) || 
+              (eventData.ticketTypes && eventData.ticketTypes.length > 0)) {
+            // Gunakan ticket atau ticketTypes
+            const ticketsData = eventData.tickets || eventData.ticketTypes;
+            
             // Urutkan tiket dari yang termahal ke termurah
-            const sortedTickets = [...eventData.ticketTypes].sort((a, b) => {
-              const priceA = a.price ? parseFloat(a.price) : 0;
-              const priceB = b.price ? parseFloat(b.price) : 0;
+            const sortedTickets = [...ticketsData].sort((a, b) => {
+              const priceA = typeof a.price === 'string' ? parseFloat(a.price) : (a.price || 0);
+              const priceB = typeof b.price === 'string' ? parseFloat(b.price) : (b.price || 0);
               return priceB - priceA;
             });
             
@@ -341,7 +370,7 @@ export const eventService = {
                                         Math.random() < 0.5 ? 'reserved' : 'selected';
                     
                     // Harga berdasarkan tiket
-                    const price = parseFloat(ticket.price || '0');
+                    const price = typeof ticket.price === 'string' ? parseFloat(ticket.price) : (ticket.price || 0);
                     
                     dummySeats.push({
                       id: seatId,
@@ -421,21 +450,28 @@ export const eventService = {
           console.log('Menggunakan data tempat duduk dari API');
           
           // Tambahkan ticketTypeId ke setiap kursi jika belum ada, berdasarkan kategori harga
-          if (eventData.ticketTypes && eventData.ticketTypes.length > 0 && 
+          if (((eventData.tickets && eventData.tickets.length > 0) || 
+               (eventData.ticketTypes && eventData.ticketTypes.length > 0)) && 
               eventData.seatArrangement && eventData.seatArrangement.seats) {
             
+            // Gunakan ticket atau ticketTypes
+            const ticketsData = eventData.tickets || eventData.ticketTypes;
+            
             // Urutkan tiket dari termahal ke termurah
-            const sortedTickets = [...eventData.ticketTypes].sort((a, b) => {
-              const priceA = a.price ? parseFloat(a.price) : 0;
-              const priceB = b.price ? parseFloat(b.price) : 0;
+            const sortedTickets = [...ticketsData].sort((a, b) => {
+              const priceA = typeof a.price === 'string' ? parseFloat(a.price) : (a.price || 0);
+              const priceB = typeof b.price === 'string' ? parseFloat(b.price) : (b.price || 0);
               return priceB - priceA;
             });
             
             // Ambil harga untuk tiap kategori
             const ticketPrices: Record<string, number> = {
-              'VVIP': sortedTickets.length > 0 ? parseFloat(sortedTickets[0].price || '0') : 0,
-              'VIP': sortedTickets.length > 1 ? parseFloat(sortedTickets[1].price || '0') : 0,
-              'Regular': sortedTickets.length > 2 ? parseFloat(sortedTickets[2].price || '0') : 0
+              'VVIP': sortedTickets.length > 0 ? 
+                (typeof sortedTickets[0].price === 'string' ? parseFloat(sortedTickets[0].price) : (sortedTickets[0].price || 0)) : 0,
+              'VIP': sortedTickets.length > 1 ? 
+                (typeof sortedTickets[1].price === 'string' ? parseFloat(sortedTickets[1].price) : (sortedTickets[1].price || 0)) : 0,
+              'Regular': sortedTickets.length > 2 ? 
+                (typeof sortedTickets[2].price === 'string' ? parseFloat(sortedTickets[2].price) : (sortedTickets[2].price || 0)) : 0
             };
             
             // Ambil ID tiket untuk tiap kategori
@@ -536,7 +572,21 @@ export const eventService = {
   // Fungsi untuk membuat booking tiket
   async createBooking(eventId: string, bookingData: BookingParams): Promise<any> {
     try {
-      const response = await api.post(`/api/events/${eventId}/bookings`, bookingData);
+      const response = await api.post(`/api/orders`, {
+        eventId: eventId,
+        tickets: [{
+          ticketType: bookingData.ticketTypeId,
+          quantity: bookingData.quantity,
+          seats: bookingData.seats.map(seat => {
+            const [row, column] = seat.split('-');
+            return { row: parseInt(row), column: parseInt(column) };
+          })
+        }],
+        paymentInfo: {
+          method: "credit_card",
+          transactionId: `TRX-${Date.now()}`
+        }
+      });
       
       if (response.data.success) {
         return response.data.data;

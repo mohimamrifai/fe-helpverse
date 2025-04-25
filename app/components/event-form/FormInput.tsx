@@ -16,6 +16,8 @@ interface FormInputProps {
   textarea?: boolean;
   rows?: number;
   error?: string;
+  information?: string;
+  formTouched?: boolean;
 }
 
 export function FormInput({
@@ -33,15 +35,22 @@ export function FormInput({
   className = '',
   textarea = false,
   rows = 4,
-  error
+  information,
+  error,
+  formTouched = true
 }: FormInputProps) {
-  const hasError = !!error;
+  const hasError = !!error && formTouched;
   const inputBaseClass = `mt-1 block w-full px-3 py-2 sm:px-4 sm:py-3 rounded-md ${hasError ? 'border-red-300 focus:border-red-500 focus:ring-red-500 bg-red-50' : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'} shadow-sm text-sm transition duration-150 ease-in-out`;
 
   return (
     <div className={className}>
-      <label htmlFor={name} className="block text-xs sm:text-sm font-semibold text-gray-700">
+      <label htmlFor={name} className="flex flex-row items-center gap-2 mb-1 text-xs sm:text-sm font-semibold text-gray-700">
         {label} {required && <span className="text-red-500">*</span>}
+        {information && (
+        <p className="text-xs text-foreground- text-gray-400" id={`${name}-information`}>
+          {information}
+        </p>
+      )}
       </label>
       {icon ? (
         <div className="mt-1 relative">

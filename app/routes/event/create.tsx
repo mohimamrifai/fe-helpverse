@@ -5,8 +5,9 @@ import { Footer } from '~/components/footer';
 import { EventDetailsStep } from '~/components/event-form/EventDetailsStep';
 import { TicketTypesStep } from '~/components/event-form/TicketTypesStep';
 import { SeatArrangementStep } from '~/components/event-form/SeatArrangementStep';
+import { PromotionalOffersStep } from '~/components/event-form/PromotionalOffersStep';
 import { NavigationButtons } from '~/components/event-form/NavigationButtons';
-import type { EventDetails, TicketType } from '~/components/event-form/types';
+import type { EventDetails, TicketType, PromotionalOffer } from '~/components/event-form/types';
 import { AuthGuard } from '~/components/AuthGuard';
 import { eventService } from '~/services/event';
 
@@ -23,56 +24,38 @@ export default function CreateEvent() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [isFormValid, setIsFormValid] = useState<{[key: number]: boolean}>({
-    1: false,
-    2: false,
-    3: false
+    1: true, // Awalnya valid sampai user mencoba next
+    2: true,
+    3: true,
+    4: true // Promo is optional, so it's valid by default
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [formTouched, setFormTouched] = useState(false); // Flag untuk menandai form sudah disentuh
 
   // Development data
   const [eventDetails, setEventDetails] = useState<EventDetails>({
-    name: 'Konser Musik Amal',
-    description: 'Konser musik amal untuk membantu korban bencana alam. Featuring artis-artis top Indonesia.',
-    date: '2025-05-01',
-    time: '19:00',
-    location: 'Stadion Gelora Bung Karno, Jakarta',
-    capacity: 1000,
+    name: '',
+    description: '',
+    date: '',
+    time: '',
+    location: '',
+    capacity: 0,
   });
-  const [ticketTypes, setTicketTypes] = useState<TicketType[]>([
-    { 
-      id: '1', 
-      name: 'Regular', 
-      price: '100000', 
-      limit: '500', 
-      rows: 20, 
-      columns: 25,
-      description: 'Tiket masuk standar untuk area reguler',
-      category: 'Regular',
-      maxPerOrder: '4',
-      saleEndDate: '2025-04-25'
-    },
-    { 
-      id: '2', 
-      name: 'VIP', 
-      price: '500000', 
-      limit: '100', 
-      rows: 10, 
-      columns: 10,
-      description: 'Tiket VIP dengan akses khusus dan merchandise',
-      category: 'VIP',
-      maxPerOrder: '2',
-      saleEndDate: '2025-04-25'
-    },
-  ]);
+  const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
   const [newTicketType, setNewTicketType] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>("https://via.placeholder.com/250x400.png?text=Event+Poster");
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-  // Validasi form di setiap step
+  // Promotional Offers state
+  const [promotionalOffers, setPromotionalOffers] = useState<PromotionalOffer[]>([]);
+
+  // Validasi form di setiap step, hanya jika form sudah disentuh
   useEffect(() => {
-    validateCurrentStep();
-  }, [eventDetails, ticketTypes, currentStep]);
+    if (formTouched) {
+      validateCurrentStep();
+    }
+  }, [eventDetails, ticketTypes, currentStep, formTouched]);
 
   const validateCurrentStep = () => {
     const newErrors: {[key: string]: string} = {};
@@ -107,9 +90,39 @@ export default function CreateEvent() {
     // Validasi Step 3: Seat Arrangement
     else if (currentStep === 3) {
       const hasSeatArrangement = ticketTypes.some(t => (t.rows || 0) > 0 && (t.columns || 0) > 0);
-      if (!hasSeatArrangement) {
+      if (!hasSeatArrangement && ticketTypes.length > 0) {
         newErrors.seatArrangement = 'Minimal satu tipe tiket harus memiliki pengaturan kursi';
       }
+    }
+    
+    // Validasi Step 4: Promotional Offers (opsional)
+    else if (currentStep === 4) {
+      // Validasi format kode promo jika ada
+      promotionalOffers.forEach((promo, index) => {
+        if (!promo.name) {
+          newErrors[`promo-${index}-name`] = 'Nama promo wajib diisi';
+        }
+        if (!promo.code) {
+          newErrors[`promo-${index}-code`] = 'Kode promo wajib diisi';
+        } else if (!/^[A-Z0-9_-]+$/.test(promo.code)) {
+          newErrors[`promo-${index}-code`] = 'Kode promo hanya boleh berisi huruf kapital, angka, underscore, dan dash';
+        }
+        if (!promo.validFrom) {
+          newErrors[`promo-${index}-validFrom`] = 'Tanggal mulai berlaku wajib diisi';
+        }
+        if (!promo.validUntil) {
+          newErrors[`promo-${index}-validUntil`] = 'Tanggal berakhir wajib diisi';
+        }
+        if (promo.validFrom && promo.validUntil && new Date(promo.validFrom) > new Date(promo.validUntil)) {
+          newErrors[`promo-${index}-dateRange`] = 'Tanggal mulai harus sebelum tanggal berakhir';
+        }
+        if (promo.discountValue <= 0) {
+          newErrors[`promo-${index}-discountValue`] = 'Nilai diskon harus lebih dari 0';
+        }
+        if (promo.discountType === 'percentage' && promo.discountValue > 100) {
+          newErrors[`promo-${index}-discountValue`] = 'Nilai diskon persentase tidak boleh lebih dari 100%';
+        }
+      });
     }
     
     setErrors(newErrors);
@@ -120,9 +133,10 @@ export default function CreateEvent() {
   };
 
   const handleNext = () => {
+    setFormTouched(true); // Mark form as touched when user tries to navigate
     validateCurrentStep();
     if (isFormValid[currentStep]) {
-      if (currentStep < 3) {
+      if (currentStep < 4) {
         setCurrentStep(currentStep + 1);
       } else {
         handleSubmitEvent();
@@ -150,6 +164,11 @@ export default function CreateEvent() {
       ...prev,
       [name]: value
     }));
+    
+    // Mark as touched when user changes form values
+    if (!formTouched) {
+      setFormTouched(true);
+    }
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -161,16 +180,31 @@ export default function CreateEvent() {
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+      
+      // Mark as touched when user uploads an image
+      if (!formTouched) {
+        setFormTouched(true);
+      }
     }
   };
 
   const handleImageRemove = () => {
     setImageFile(null);
     setImagePreview(null);
+    
+    // Mark as touched when user removes an image
+    if (!formTouched) {
+      setFormTouched(true);
+    }
   };
 
   const handleNewTicketTypeChange = (value: string) => {
     setNewTicketType(value);
+    
+    // Mark as touched when user types in new ticket type
+    if (!formTouched) {
+      setFormTouched(true);
+    }
   };
 
   const handleAddTicketType = (e: React.FormEvent) => {
@@ -193,39 +227,64 @@ export default function CreateEvent() {
         }
       ]);
       setNewTicketType('');
+      
+      // Mark as touched when user adds a ticket type
+      if (!formTouched) {
+        setFormTouched(true);
+      }
     }
   };
 
   const handleRemoveTicketType = (id: string) => {
     setTicketTypes(prev => prev.filter(ticketType => ticketType.id !== id));
+    
+    // Mark as touched when user removes a ticket type
+    if (!formTouched) {
+      setFormTouched(true);
+    }
   };
 
   const handleTicketTypeChange = (id: string, field: keyof TicketType, value: string) => {
     setTicketTypes(prev => prev.map(ticketType => 
       ticketType.id === id ? { ...ticketType, [field]: value } : ticketType
     ));
+    
+    // Mark as touched when user changes ticket type details
+    if (!formTouched) {
+      setFormTouched(true);
+    }
   };
 
-  const generateSeats = (ticketType: TicketType) => {
-    const rows = ticketType.rows || 0;
-    const columns = ticketType.columns || 0;
-    const seats = [];
-
-    for (let i = 0; i < rows; i++) {
-      const rowLabel = String.fromCharCode(65 + i);
-      for (let j = 0; j < columns; j++) {
-        const columnNumber = j + 1;
-        seats.push({
-          id: `${rowLabel}${columnNumber}`,
-          row: rowLabel,
-          column: columnNumber.toString(),
-          status: 'available' as 'available' | 'reserved' | 'selected' | 'booked',
-          price: parseInt(ticketType.price) || 0
-        });
-      }
+  // Promo handling functions
+  const handleAddPromo = (promo: PromotionalOffer) => {
+    setPromotionalOffers(prev => [...prev, promo]);
+    
+    // Mark as touched when user adds a promo
+    if (!formTouched) {
+      setFormTouched(true);
     }
+  };
 
-    return seats;
+  const handleRemovePromo = (id: string) => {
+    setPromotionalOffers(prev => prev.filter(promo => promo.id !== id));
+    
+    // Mark as touched when user removes a promo
+    if (!formTouched) {
+      setFormTouched(true);
+    }
+  };
+
+  const handlePromoChange = (id: string, field: keyof PromotionalOffer, value: any) => {
+    setPromotionalOffers(prev => 
+      prev.map(promo => 
+        promo.id === id ? { ...promo, [field]: value } : promo
+      )
+    );
+    
+    // Mark as touched when user changes promo details
+    if (!formTouched) {
+      setFormTouched(true);
+    }
   };
 
   const handleSubmitEvent = async () => {
@@ -273,7 +332,8 @@ export default function CreateEvent() {
         image: imageFile ? imageFile.name : "event-poster.jpg", // Ubah ini sesuai dengan upload file yang sebenarnya
         capacity: eventDetails.capacity,
         ticketTypes: formattedTicketTypes,
-        seatArrangement: seatArrangement
+        seatArrangement: seatArrangement,
+        promotionalOffers
       };
 
       console.log('Data yang akan dikirim ke server:', eventData);
@@ -312,7 +372,8 @@ export default function CreateEvent() {
         },
         approvalStatus: "pending",
         approvalNotes: "",
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        promotionalOffers
       };
 
       const response = await eventService.createEvent(apiEventData as any);
@@ -422,6 +483,7 @@ export default function CreateEvent() {
         onImageChange={handleImageChange}
         onImageRemove={handleImageRemove}
         errors={errors}
+        formTouched={formTouched}
       /> 
     },
     { 
@@ -448,32 +510,37 @@ export default function CreateEvent() {
         errors={errors}
       /> 
     },
+    { 
+      title: 'Promotional Offers', 
+      component: <PromotionalOffersStep 
+        promotionalOffers={promotionalOffers}
+        onAddPromo={handleAddPromo}
+        onRemovePromo={handleRemovePromo}
+        onPromoChange={handlePromoChange}
+        errors={errors}
+      /> 
+    },
   ];
-
-  // Format harga dalam ringgit Malaysia
-  const formatPrice = (price: number) => {
-    return `RM ${price.toLocaleString()}`;
-  };
 
   return (
     <AuthGuard allowedRoles={['eventOrganizer']}>
-      <main className="min-h-screen bg-gray-50">
+      <main className="min-h-screen bg-secondary">
         <Navbar />
-        <div className="max-w-7xl mx-auto py-4 sm:py-6 md:py-8 px-4 sm:px-6 lg:px-8">
-          <div className="px-2 py-2 sm:px-0">
+        <div className="max-w-7xl mx-auto py-3 sm:py-6 md:py-10 px-3 sm:px-6 lg:px-8">
+          <div className="px-0 sm:px-2">
             <div className="max-w-3xl mx-auto">
-              <div className="text-center mb-4 sm:mb-6">
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">Create New Event</h1>
-                <p className="mt-1 text-sm text-gray-600">
-                  Step {currentStep} of {steps.length}
+              <div className="text-center mb-3 sm:mb-4">
+                <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-primary">Create New Event</h1>
+                <p className="mt-1 text-xs sm:text-sm text-foreground-muted">
+                  Step {currentStep} of {steps.length}: {steps[currentStep - 1].title}
                 </p>
               </div>
 
-              <div className="bg-white shadow rounded-lg p-3 sm:p-4 md:p-6">
+              <div className="bg-secondary rounded-lg p-2 sm:p-4 md:p-6">
                 {steps[currentStep - 1].component}
                 
                 {/* Error summary jika ada error di step saat ini */}
-                {Object.keys(errors).length > 0 && (
+                {formTouched && Object.keys(errors).length > 0 && (
                   <div className="mt-3 p-2 sm:p-3 bg-red-50 border border-red-200 rounded-md">
                     <h3 className="text-xs sm:text-sm font-medium text-red-800">Harap perbaiki error berikut:</h3>
                     <ul className="mt-1 text-xs sm:text-sm text-red-700 list-disc list-inside">
@@ -508,21 +575,21 @@ export default function CreateEvent() {
 
         {/* Success Modal */}
         {showSuccessModal && (
-          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-4 sm:p-6">
               <div className="text-center">
-                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                  <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="mx-auto flex items-center justify-center h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-green-100 mb-3 sm:mb-4">
+                  <svg className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Event Created Successfully!</h3>
+                <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">Event Created Successfully!</h3>
                 <p className="text-sm text-gray-500 mb-4">
                   Your event has been created successfully. You will be redirected to the home page.
                 </p>
                 <button
                   onClick={handleSuccessModalClose}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="inline-flex items-center justify-center px-3 py-1.5 sm:px-4 sm:py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 w-full sm:w-auto"
                 >
                   OK
                 </button>

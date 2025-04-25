@@ -1,19 +1,36 @@
 import axios from 'axios';
 
-// Definisi tipe untuk user
+// Definisi tipe untuk user sesuai dengan dokumentasi API
 export interface User {
   id: string;
+  _id: string;
   username: string;
-  role: 'admin' | 'eventOrganizer' | 'user';
-  fullName?: string;
-  email?: string;
+  email: string;
+  password?: string; // Password tidak akan dikembalikan dari API, tapi dibutuhkan untuk registrasi
+  fullName: string;
+  phone: string;
+  organizerName?: string; // Wajib untuk event organizer
+  role: 'user' | 'eventOrganizer' | 'admin';
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // Definisi tipe untuk parameter login
 interface LoginParams {
-  username: string;
+  username: string; // Username atau email
   password: string;
   rememberMe: boolean;
+}
+
+// Definisi tipe untuk parameter registrasi pengguna biasa
+interface RegisterUserParams {
+  username: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  password: string;
+  agreeTerms: boolean;
+  role: 'user';
 }
 
 // Definisi tipe untuk parameter registrasi event organizer
@@ -22,10 +39,18 @@ interface RegisterEventOrganizerParams {
   fullName: string;
   email: string;
   phone: string;
-  organizationName: string;
+  organizerName: string; // Nama organisasi event organizer
   password: string;
   agreeTerms: boolean;
-  role: string;
+  role: 'eventOrganizer';
+}
+
+// Definisi tipe untuk respons autentikasi
+interface AuthResponse {
+  success: boolean;
+  token: string;
+  data: User;
+  message?: string;
 }
 
 // Base URL dari API
@@ -57,13 +82,29 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Fungsi untuk normalisasi data user
+const normalizeUser = (userData: any): User => {
+  return {
+    id: userData.id || userData._id,
+    _id: userData._id || userData.id,
+    username: userData.username,
+    email: userData.email,
+    fullName: userData.fullName,
+    phone: userData.phone || '',
+    organizerName: userData.organizerName || userData.organizationName,
+    role: userData.role,
+    createdAt: userData.createdAt ? new Date(userData.createdAt) : new Date(),
+    updatedAt: userData.updatedAt ? new Date(userData.updatedAt) : new Date()
+  };
+};
+
 export const authService = {
   // Fungsi untuk login
   async login(params: LoginParams): Promise<User> {
     try {
       const { username, password, rememberMe } = params;
-      const response = await api.post('/api/auth/login', {
-        email: username,
+      const response = await api.post<AuthResponse>('/api/auth/login', {
+        identifier: username, // Menggunakan format identifier yang bisa berupa email atau username
         password,
         rememberMe
       });
@@ -76,7 +117,7 @@ export const authService = {
           return this.getCurrentUser();
         }
         
-        return response.data.data;
+        return normalizeUser(response.data.data);
       }
       
       throw new Error(response.data.message || 'Login failed');
@@ -88,18 +129,48 @@ export const authService = {
     }
   },
 
+  // Fungsi untuk registrasi pengguna biasa
+  async registerUser(params: RegisterUserParams): Promise<User> {
+    try {
+      // Pastikan semua field yang diperlukan tersedia
+      if (!params.username || !params.fullName || !params.email || !params.phone || !params.password) {
+        throw new Error('Semua field harus diisi');
+      }
+      
+      const response = await api.post<AuthResponse>('/api/auth/register', params);
+      
+      if (response.data.success && response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        
+        // Jika response tidak mengandung data user, ambil data user menggunakan token
+        if (!response.data.data) {
+          return this.getCurrentUser();
+        }
+        
+        return normalizeUser(response.data.data);
+      }
+      
+      throw new Error(response.data.message || 'Registration failed');
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        throw new Error(error.response.data.message || 'Registration failed');
+      }
+      throw error;
+    }
+  },
+
   // Fungsi untuk registrasi event organizer
   async registerEventOrganizer(params: RegisterEventOrganizerParams): Promise<User> {
     try {
       // Pastikan semua field yang diperlukan tersedia
-      if (!params.username || !params.fullName || !params.email || !params.phone || !params.organizationName || !params.password) {
+      if (!params.username || !params.fullName || !params.email || !params.phone || !params.organizerName || !params.password) {
         throw new Error('Semua field harus diisi');
       }
       
       // Data sudah dalam format yang diharapkan server
       console.log('Data yang dikirim ke API:', params);
       
-      const response = await api.post('/api/auth/register', params);
+      const response = await api.post<AuthResponse>('/api/auth/register/event-organizer', params);
       
       console.log('API response:', response.data);
       
@@ -111,7 +182,7 @@ export const authService = {
           return this.getCurrentUser();
         }
         
-        return response.data.data;
+        return normalizeUser(response.data.data);
       }
       
       throw new Error(response.data.message || 'Registration failed');
@@ -133,14 +204,15 @@ export const authService = {
       console.log('🔄 getCurrentUser: Fetching current user data...');
       console.log('🔑 getCurrentUser: Token exists:', !!getToken());
       
-      const response = await api.get('/api/auth/me');
+      const response = await api.get<AuthResponse>('/api/auth/me');
       
       console.log('✅ getCurrentUser: API response success:', response.data.success);
       
       if (response.data.success) {
+        const normalizedUser = normalizeUser(response.data.data);
         // Simpan data user di localStorage untuk fallback jika diperlukan
-        localStorage.setItem('userData', JSON.stringify(response.data.data));
-        return response.data.data;
+        localStorage.setItem('userData', JSON.stringify(normalizedUser));
+        return normalizedUser;
       }
       
       throw new Error(response.data.message || 'Failed to get user data');

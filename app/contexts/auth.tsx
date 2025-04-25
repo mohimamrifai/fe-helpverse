@@ -8,15 +8,22 @@ interface AuthContextType {
   loading: boolean;
   error: string | null;
   login: (username: string, password: string, rememberMe: boolean) => Promise<void>;
+  registerUser: (data: {
+    username: string;
+    fullName: string;
+    email: string;
+    phone: string;
+    password: string;
+    agreeTerms: boolean;
+  }) => Promise<void>;
   registerEventOrganizer: (data: {
     username: string;
     fullName: string;
     email: string;
     phone: string;
-    organizationName: string;
+    organizerName: string;
     password: string;
     agreeTerms: boolean;
-    role: string;
   }) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
@@ -105,20 +112,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Fungsi untuk registrasi pengguna biasa
+  const registerUser = async (data: {
+    username: string;
+    fullName: string;
+    email: string;
+    phone: string;
+    password: string;
+    agreeTerms: boolean;
+  }) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const userData = await authService.registerUser({
+        ...data,
+        role: 'user'
+      });
+      console.log('User registration successful, user data:', userData);
+      setUser(userData);
+    } catch (err) {
+      console.error('Registration error:', err);
+      setError(err instanceof Error ? err.message : 'Registration failed');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const registerEventOrganizer = async (data: {
     username: string;
     fullName: string;
     email: string;
     phone: string;
-    organizationName: string;
+    organizerName: string;
     password: string;
     agreeTerms: boolean;
-    role: string;
   }) => {
     try {
       setLoading(true);
       setError(null);
-      const userData = await authService.registerEventOrganizer(data);
+      const userData = await authService.registerEventOrganizer({
+        ...data,
+        role: 'eventOrganizer'
+      });
       console.log('Registration successful, user data:', userData);
       setUser(userData);
     } catch (err) {
@@ -142,6 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     error,
     login,
+    registerUser,
     registerEventOrganizer,
     logout,
     isAuthenticated: !!user,

@@ -23,7 +23,7 @@ export function TicketTypesStep({
   errors = {}
 }: TicketTypesStepProps) {
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-4 sm:space-y-6 bg-secondary">
       <div>
         <h2 className="text-base sm:text-lg font-semibold text-gray-900 flex items-center">
           <FaTicketAlt className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-gray-400" />
@@ -31,7 +31,7 @@ export function TicketTypesStep({
         </h2>
         
         {/* Add New Ticket Type */}
-        <div className="flex gap-2 sm:gap-4 mt-3 sm:mt-4">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mt-3 sm:mt-4">
           <div className="flex-grow">
             <label htmlFor="newTicketType" className="sr-only">Add New Ticket Type</label>
             <input
@@ -46,11 +46,10 @@ export function TicketTypesStep({
           <button
             type="button"
             onClick={onAddTicketType}
-            className="inline-flex items-center px-2 py-2 sm:px-4 sm:py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
+            className="inline-flex items-center justify-center px-3 py-2 sm:px-4 sm:py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
           >
             <FaPlus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-            <span className="hidden xs:inline">Add Ticket</span>
-            <span className="xs:hidden">Add</span>
+            <span>Add Ticket</span>
           </button>
         </div>
 
@@ -61,16 +60,17 @@ export function TicketTypesStep({
         {/* Ticket Types List */}
         <div className="space-y-3 sm:space-y-4 mt-4 sm:mt-6">
           {ticketTypes.map((type, index) => (
-            <div key={type.id} className="bg-gray-50 rounded-lg p-2 sm:p-4 space-y-3 sm:space-y-4">
+            <div key={type.id} className="bg-white rounded-lg p-3 sm:p-4 space-y-3 sm:space-y-4 shadow-sm border border-gray-200">
               <div className="flex justify-between items-center">
-                <h3 className="text-xs sm:text-sm font-medium text-gray-900 flex items-center">
-                  <FaTicketAlt className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 text-gray-400" />
-                  {type.name}
+                <h3 className="text-xs sm:text-sm font-medium text-gray-900 flex items-center max-w-[85%]">
+                  <FaTicketAlt className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 text-gray-400 flex-shrink-0" />
+                  <span className="truncate">{type.name}</span>
                 </h3>
                 <button
                   type="button"
                   onClick={() => onRemoveTicketType(type.id)}
-                  className="text-gray-400 hover:text-red-500 transition-colors duration-200"
+                  className="text-gray-400 hover:text-red-500 transition-colors duration-200 flex-shrink-0"
+                  aria-label="Remove ticket type"
                 >
                   <FaTrashAlt className="h-4 w-4 sm:h-5 sm:w-5" />
                 </button>
@@ -131,40 +131,6 @@ export function TicketTypesStep({
                   {errors[`ticket-${index}-limit`] && (
                     <p className="mt-1 text-xs sm:text-sm text-red-600">{errors[`ticket-${index}-limit`]}</p>
                   )}
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                <div>
-                  <label htmlFor={`category-${type.id}`} className="block text-xs sm:text-sm font-semibold text-gray-700">
-                    Category
-                  </label>
-                  <select
-                    id={`category-${type.id}`}
-                    value={type.category || ''}
-                    onChange={(e) => onTicketTypeChange(type.id, 'category', e.target.value)}
-                    className="mt-1 block w-full px-3 py-2 sm:px-4 sm:py-3 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm transition duration-150 ease-in-out"
-                  >
-                    <option value="">Pilih Kategori</option>
-                    <option value="Regular">Regular</option>
-                    <option value="VIP">VIP</option>
-                    <option value="VVIP">VVIP</option>
-                    <option value="Economy">Economy</option>
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor={`maxPerOrder-${type.id}`} className="block text-xs sm:text-sm font-semibold text-gray-700">
-                    Max Per Order
-                  </label>
-                  <input
-                    type="number"
-                    id={`maxPerOrder-${type.id}`}
-                    value={type.maxPerOrder || '4'}
-                    onChange={(e) => onTicketTypeChange(type.id, 'maxPerOrder', e.target.value)}
-                    min="1"
-                    className="mt-1 block w-full px-3 py-2 sm:px-4 sm:py-3 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm transition duration-150 ease-in-out"
-                    placeholder="Maksimal pembelian per order"
-                  />
                 </div>
               </div>
               
