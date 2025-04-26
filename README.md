@@ -1,155 +1,155 @@
 # HelpVerse
 
-HelpVerse adalah platform ticketing event yang memungkinkan event organizer untuk membuat dan mempublikasikan event, serta memungkinkan pengguna untuk membeli tiket event secara online.
+HelpVerse is an event ticketing platform that enables event organizers to create and publish events, as well as allowing users to purchase event tickets online.
 
-## 📋 Daftar Isi
+## 📋 Table of Contents
 
-- [Tentang Aplikasi](#tentang-aplikasi)
-- [Fitur Utama](#fitur-utama)
-- [Cara Instalasi](#cara-instalasi)
-- [Penggunaan Aplikasi](#penggunaan-aplikasi)
+- [About the Application](#about-the-application)
+- [Key Features](#key-features)
+- [Installation Guide](#installation-guide)
+- [Application Usage](#application-usage)
 - [Tech Stack](#tech-stack)
-- [Struktur Proyek](#struktur-proyek)
-- [Pengembangan Lanjutan](#pengembangan-lanjutan)
-- [Lisensi](#lisensi)
+- [Project Structure](#project-structure)
+- [Advanced Development](#advanced-development)
+- [License](#license)
 
-## 📌 Tentang Aplikasi
+## 📌 About the Application
 
-HelpVerse adalah platform ticketing event komprehensif yang memungkinkan:
-- **Event Organizer** untuk membuat dan mengelola event
-- **Pengguna** untuk mencari, memesan, dan membeli tiket event
-- **Admin** untuk mengelola seluruh platform
+HelpVerse is a comprehensive event ticketing platform that enables:
+- **Event Organizers** to create and manage events
+- **Users** to search for, book, and purchase event tickets
+- **Admins** to manage the entire platform
 
-Aplikasi ini dirancang untuk memberikan pengalaman yang mulus dalam mengelola dan menghadiri berbagai jenis event.
+This application is designed to provide a seamless experience in managing and attending various types of events.
 
-## ✨ Fitur Utama
+## ✨ Key Features
 
-### Manajemen Pengguna
-- Registrasi dengan 3 role: User, Event Organizer, dan Admin
-- Login/Logout dengan autentikasi JWT
-- Profil pengguna dengan riwayat pembelian tiket
+### User Management
+- Registration with 3 roles: User, Event Organizer, and Admin
+- Login/Logout with JWT authentication
+- User profiles with ticket purchase history
 
-### Manajemen Event
-- Pencarian dan filter event berdasarkan tanggal, lokasi, dan tag
-- Halaman detail event dengan informasi komprehensif
-- Galeri gambar event
+### Event Management
+- Search and filter events by date, location, and tags
+- Detailed event pages with comprehensive information
+- Event image galleries
 
-### Sistem Tiket
-- Berbagai tipe tiket dengan harga berbeda
-- Pemilihan kursi berdasarkan denah venue
-- Penerapan diskon dan kode promo
+### Ticket System
+- Various ticket types with different pricing
+- Seat selection based on venue layout
+- Discount and promo code implementation
 
-### Proses Pemesanan
-- Pemesanan tiket event
-- Sistem waiting list untuk event dengan tiket terbatas
-- Manajemen pemesanan dan pembayaran
+### Booking Process
+- Event ticket booking
+- Waiting list system for events with limited tickets
+- Booking and payment management
 
-## 💻 Cara Instalasi
+## 💻 Installation Guide
 
-### Prasyarat
-- [Node.js](https://nodejs.org/) (v18 atau lebih baru)
-- [npm](https://www.npmjs.com/) atau [pnpm](https://pnpm.io/) (disarankan)
+### Prerequisites
+- [Node.js](https://nodejs.org/) (v18 or newer)
+- [npm](https://www.npmjs.com/) or [pnpm](https://pnpm.io/) (recommended)
 - Git
 
-### Langkah Instalasi
+### Installation Steps
 
-1. **Clone repositori**
+1. **Clone the repository**
    ```bash
    git clone https://github.com/username/helpverse.git
    cd helpverse
    ```
 
-2. **Instal dependensi**
+2. **Install dependencies**
    ```bash
    pnpm install
    ```
    
-   Atau menggunakan npm:
+   Or using npm:
    ```bash
    npm install
    ```
 
-3. **Konfigurasi Environment**
+3. **Configure Environment**
    ```bash
    cp .env.example .env
    ```
    
-   Edit file `.env` dan sesuaikan dengan konfigurasi yang dibutuhkan.
+   Edit the `.env` file and adjust to your required configuration.
 
-4. **Jalankan aplikasi dalam mode development**
+4. **Run the application in development mode**
    ```bash
    pnpm dev
    ```
    
-   Atau jika ingin menjalankan dengan proxy CORS:
+   Or if you want to run with CORS proxy:
    ```bash
    pnpm dev:cors
    ```
 
-5. **Build untuk production**
+5. **Build for production**
    ```bash
    pnpm build
    ```
 
-6. **Jalankan aplikasi production**
+6. **Run the production application**
    ```bash
    pnpm start
    ```
 
-## 🚀 Penggunaan Aplikasi
+## 🚀 Application Usage
 
-### Untuk Pengguna Umum
-1. **Daftar/Login** ke aplikasi
-2. **Cari event** yang ingin dihadiri
-3. **Pilih tiket** yang diinginkan
-4. **Pesan dan bayar** untuk mendapatkan tiket
-5. **Lihat tiket** di halaman "My Bookings"
+### For General Users
+1. **Register/Login** to the application
+2. **Search for events** you want to attend
+3. **Select tickets** you desire
+4. **Book and pay** to get your tickets
+5. **View tickets** on the "My Bookings" page
 
-### Untuk Event Organizer
-1. **Daftar sebagai Event Organizer** melalui `/register/event-organizer`
-2. **Login** ke aplikasi
-3. **Buat event baru** melalui `/event/create`
-4. **Kelola event** yang telah dibuat
-5. **Pantau penjualan tiket** dan statistiknya
+### For Event Organizers
+1. **Register as an Event Organizer** via `/register/event-organizer`
+2. **Login** to the application
+3. **Create a new event** via `/event/create`
+4. **Manage events** you have created
+5. **Monitor ticket sales** and statistics
 
-### Fitur Waiting List
-1. Jika event sudah terjual habis, pengguna dapat **bergabung ke waiting list**
-2. Pengguna akan **menerima notifikasi** jika tiket tersedia
-3. Pengguna dapat **membatalkan** pendaftaran waiting list di halaman "My Waiting List"
+### Waiting List Feature
+1. If an event is sold out, users can **join the waiting list**
+2. Users will **receive notifications** when tickets become available
+3. Users can **cancel** their waiting list registration on the "My Waiting List" page
 
 ## 🛠️ Tech Stack
 
 ### Frontend
-- React dengan React Router
+- React with React Router
 - TypeScript
 - Tailwind CSS
-- Axios untuk HTTP request
+- Axios for HTTP requests
 
 ### Development Tools
-- Vite sebagai build tool
-- ESLint dan TypeScript untuk type checking
+- Vite as the build tool
+- ESLint and TypeScript for type checking
 
-## 📁 Struktur Proyek
+## 📁 Project Structure
 
 ```
 helpverse/
-├── app/                  # Kode sumber aplikasi
-│   ├── components/       # Komponen React reusable
+├── app/                  # Application source code
+│   ├── components/       # Reusable React components
 │   ├── contexts/         # React contexts
 │   ├── hooks/            # Custom React hooks
-│   ├── pages/            # Halaman utama aplikasi
+│   ├── pages/            # Main application pages
 │   ├── routes/           # Route components
-│   ├── services/         # Service untuk API call
-│   └── utils/            # Fungsi utilitas
-├── public/               # Aset statis
-├── .react-router/        # Konfigurasi React Router
-├── node_modules/         # Dependensi
-└── ...                   # File konfigurasi lainnya
+│   ├── services/         # Services for API calls
+│   └── utils/            # Utility functions
+├── public/               # Static assets
+├── .react-router/        # React Router configuration
+├── node_modules/         # Dependencies
+└── ...                   # Other configuration files
 ```
 
-## 🔧 Pengembangan Lanjutan
+## 🔧 Advanced Development
 
-### Menjalankan Pengujian
+### Running Tests
 ```bash
 pnpm test
 ```
@@ -159,12 +159,12 @@ pnpm test
 pnpm typecheck
 ```
 
-### Konfigurasi CORS Proxy
-Jika Anda mengalami masalah CORS saat development, gunakan:
+### CORS Proxy Configuration
+If you encounter CORS issues during development, use:
 ```bash
 pnpm proxy
 ```
 
-## 📄 Lisensi
+## 📄 License
 
 [MIT License](LICENSE)
