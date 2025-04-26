@@ -4,10 +4,11 @@ import type { PromotionalOffer } from './types';
 
 interface PromotionalOffersStepProps {
   promotionalOffers: PromotionalOffer[];
-  onAddPromo: (promo: PromotionalOffer) => void;
+  onAddPromo: (promo: Omit<PromotionalOffer, 'id'>) => void;
   onRemovePromo: (id: string) => void;
   onPromoChange: (id: string, field: keyof PromotionalOffer, value: any) => void;
   errors?: {[key: string]: string};
+  formTouched?: boolean;
 }
 
 export function PromotionalOffersStep({
@@ -15,7 +16,8 @@ export function PromotionalOffersStep({
   onAddPromo,
   onRemovePromo,
   onPromoChange,
-  errors = {}
+  errors = {},
+  formTouched = false
 }: PromotionalOffersStepProps) {
   const [showAddPromoForm, setShowAddPromoForm] = useState(false);
   const [newPromo, setNewPromo] = useState<Omit<PromotionalOffer, 'id'>>({
@@ -40,8 +42,7 @@ export function PromotionalOffersStep({
 
   const handleSubmitPromo = (e: React.FormEvent) => {
     e.preventDefault();
-    const id = Date.now().toString();
-    onAddPromo({ ...newPromo, id });
+    onAddPromo({ ...newPromo });
     setNewPromo({
       name: '',
       description: '',

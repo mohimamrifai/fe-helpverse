@@ -180,7 +180,7 @@ export default function EventBookingPage() {
 
                 <div className="flex flex-col md:flex-row gap-4">
                     {/* Seat map */}
-                    <div className="bg-gray-200 rounded-lg p-2 md:p-4 flex-grow overflow-x-auto">
+                    <div className="bg-gray-200 rounded-lg p-2 md:p-4 w-full md:w-[70%] overflow-x-auto">
                         <SeatMap 
                             tickets={event.tickets} 
                             generatedSeats={generatedSeats} 
@@ -190,13 +190,15 @@ export default function EventBookingPage() {
                     </div>
 
                     {/* Event details and seat selection */}
-                    <EventSummary 
-                        event={event}
-                        selectedSeats={selectedSeats}
-                        generatedSeats={generatedSeats}
-                        onRemoveSelection={handleRemoveSelection}
-                        eventId={id || ''}
-                    />
+                    <div className="w-full md:w-[30%]">
+                        <EventSummary 
+                            event={event}
+                            selectedSeats={selectedSeats}
+                            generatedSeats={generatedSeats}
+                            onRemoveSelection={handleRemoveSelection}
+                            eventId={id || ''}
+                        />
+                    </div>
                 </div>
             </div>
             <Footer />

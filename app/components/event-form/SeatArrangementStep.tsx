@@ -6,12 +6,14 @@ interface SeatArrangementStepProps {
   ticketTypes: TicketType[];
   onSeatLayoutChange: (ticketId: string, rows: number, columns: number) => void;
   errors?: {[key: string]: string};
+  formTouched?: boolean;
 }
 
 export function SeatArrangementStep({ 
   ticketTypes, 
   onSeatLayoutChange,
-  errors = {}
+  errors = {},
+  formTouched = false
 }: SeatArrangementStepProps) {
   
   // Fungsi untuk menangani perubahan jumlah baris
@@ -42,7 +44,7 @@ export function SeatArrangementStep({
         </p>
         
         {/* Error message for seat arrangement */}
-        {errors.seatArrangement && (
+        {formTouched && errors.seatArrangement && (
           <div className="mt-2 p-2 sm:p-3 rounded-md bg-red-50 border border-red-200">
             <p className="text-xs sm:text-sm text-red-700">{errors.seatArrangement}</p>
           </div>

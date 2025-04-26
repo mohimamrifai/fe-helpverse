@@ -58,7 +58,7 @@ export function generateSeatsFromTickets(event: Event): GeneratedSeat[] {
  */
 export function formatRinggit(amount: number | string): string {
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-  return `RM ${numAmount.toFixed(2)}`;
+  return `RM ${numAmount.toFixed(0)}`;
 }
 
 /**

@@ -4,14 +4,14 @@ import { eventService } from "../services/event";
 import type { PromotionalOffer, Event } from "../services/event";
 import { Link } from "react-router";
 
-// Interface untuk eventOffers state
+// Interface for eventOffers state
 interface EventOffer {
     event: string;
     offer: PromotionalOffer;
-    eventId: string; // Menambahkan eventId untuk link ke detail event
+    eventId: string; // Adding eventId for link to event details
 }
 
-// Fungsi untuk mendapatkan ikon berdasarkan jenis diskon
+// Function to get icon based on discount type
 const getIconByDiscountType = (discountType: string, discountValue: number) => {
     if (discountType === 'percentage') {
         return <FaTicketAlt className="text-secondary text-5xl" />;
@@ -35,11 +35,11 @@ export function PromotionSection() {
         const fetchPromotionalOffers = async () => {
             try {
                 setLoading(true);
-                // Menggunakan eventService untuk mengambil data
+                // Using eventService to get data
                 const response = await eventService.getAllEvents();
                 const events = response.events || [];
                 
-                // Mengumpulkan semua promo aktif dari semua event
+                // Collect all active promos from all events
                 const offers: EventOffer[] = [];
                 
                 events.forEach(event => {
@@ -50,17 +50,15 @@ export function PromotionSection() {
                                 offers.push({
                                     event: event.name,
                                     offer,
-                                    eventId: event._id // Menyimpan ID event untuk link
+                                    eventId: event._id // Store event ID for link
                                 });
                             });
                     }
                 });
                 
-                console.log("Data promo yang ditemukan:", offers);
                 setEventOffers(offers);
             } catch (err) {
-                console.error("Error fetching promotional offers:", err);
-                setError("Gagal memuat promo. Silakan coba lagi nanti.");
+                setError("Failed to load promotions. Please try again later.");
             } finally {
                 setLoading(false);
             }
@@ -103,7 +101,7 @@ export function PromotionSection() {
 
     // Auto scroll effect
     useEffect(() => {
-        if (eventOffers.length <= itemsToShow) return; // Tidak perlu auto-scroll jika item sedikit
+        if (eventOffers.length <= itemsToShow) return; // No need for auto-scroll if few items
         
         const interval = setInterval(() => {
             nextSlide();
@@ -122,23 +120,23 @@ export function PromotionSection() {
         }
     }, [currentIndex]);
 
-    // Tampilkan loading state
+    // Show loading state
     if (loading) {
         return (
             <div className="bg-secondary p-4 md:p-10">
-                <h1 className="text-primary md:text-4xl text-2xl font-bold">Promo menarik untuk kamu</h1>
+                <h1 className="text-primary md:text-4xl text-2xl font-bold">Exciting promotions for you</h1>
                 <div className="flex justify-center items-center h-40">
-                    <p className="text-primary">Memuat promo...</p>
+                    <p className="text-primary">Loading promotions...</p>
                 </div>
             </div>
         );
     }
 
-    // Tampilkan error jika ada
+    // Show error if any
     if (error) {
         return (
             <div className="bg-secondary p-4 md:p-10">
-                <h1 className="text-primary md:text-4xl text-2xl font-bold">Promo menarik untuk kamu</h1>
+                <h1 className="text-primary md:text-4xl text-2xl font-bold">Exciting promotions for you</h1>
                 <div className="flex justify-center items-center h-40">
                     <p className="text-primary">{error}</p>
                 </div>
@@ -146,13 +144,13 @@ export function PromotionSection() {
         );
     }
 
-    // Tampilkan pesan jika tidak ada promo
+    // Show message if no promo
     if (eventOffers.length === 0) {
         return (
             <div className="bg-secondary p-4 md:p-10">
-                <h1 className="text-primary md:text-4xl text-2xl font-bold">Promo menarik untuk kamu</h1>
+                <h1 className="text-primary md:text-4xl text-2xl font-bold">Exciting promotions for you</h1>
                 <div className="flex justify-center items-center h-40">
-                    <p className="text-primary">Belum ada promo tersedia saat ini.</p>
+                    <p className="text-primary">No promotions available at this time.</p>
                 </div>
             </div>
         );
@@ -160,10 +158,10 @@ export function PromotionSection() {
 
     return (
         <div className="bg-secondary p-4 md:p-10 relative">
-            <h1 className="text-primary md:text-4xl text-2xl font-bold">Promo menarik untuk kamu</h1>
+            <h1 className="text-primary md:text-4xl text-2xl font-bold">Exciting promotions for you</h1>
 
             <div className="relative mt-6">
-                {/* Navigation buttons - hanya tampilkan jika ada lebih dari itemsToShow promo */}
+                {/* Navigation buttons - only show if there are more than itemsToShow promos */}
                 {eventOffers.length > itemsToShow && (
                     <>
                         <button 
@@ -192,7 +190,7 @@ export function PromotionSection() {
                         const { event, offer, eventId } = item;
                         const icon = getIconByDiscountType(offer.discountType, offer.discountValue);
                         
-                        // Format title berdasarkan jenis diskon
+                        // Format title based on discount type
                         let title = "";
                         if (offer.discountType === 'percentage') {
                             title = `${offer.discountValue}% Discount`;
@@ -202,9 +200,9 @@ export function PromotionSection() {
                             title = offer.code;
                         }
                         
-                        // Format tanggal untuk menampilkan validitas promo
-                        const validFrom = new Date(offer.validFrom).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'});
-                        const validUntil = new Date(offer.validUntil).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'});
+                        // Format date to display promo validity
+                        const validFrom = new Date(offer.validFrom).toLocaleDateString('en-US', {day: 'numeric', month: 'short'});
+                        const validUntil = new Date(offer.validUntil).toLocaleDateString('en-US', {day: 'numeric', month: 'short'});
                         
                         return (
                             <Link 
@@ -222,16 +220,16 @@ export function PromotionSection() {
                                             {/* <span className="inline-block bg-secondary text-primary text-xs px-2 py-1 rounded mt-1">{event}</span> */}
                                         </div>
                                     </div>
-                                    {/* Deskripsi ditambahkan secara manual karena tidak ada dalam PromotionalOffer dari API */}
+                                    {/* Description added manually because it's not in PromotionalOffer from API */}
                                     <p className="text-secondary md:text-sm text-xs mt-2 text-center md:text-left">
                                         {offer.discountType === 'percentage' 
-                                            ? `Hemat ${offer.discountValue}% untuk event ${event}`
-                                            : `Hemat RM${offer.discountValue} untuk event ${event}`
+                                            ? `Save ${offer.discountValue}% for event ${event}`
+                                            : `Save RM${offer.discountValue} for event ${event}`
                                         }
                                     </p>
                                     <div className="mt-4 pt-3 border-t border-secondary/30 text-center md:text-left">
-                                        <p className="text-secondary text-xs font-semibold">Kode: <span className="bg-secondary/20 px-2 py-1 rounded">{offer.code}</span></p>
-                                        <p className="text-secondary text-xs mt-1">Berlaku: {validFrom} - {validUntil}</p>
+                                        <p className="text-secondary text-xs font-semibold">Code: <span className="bg-secondary/20 px-2 py-1 rounded">{offer.code}</span></p>
+                                        <p className="text-secondary text-xs mt-1">Valid: {validFrom} - {validUntil}</p>
                                     </div>
                                 </div>
                             </Link>
@@ -239,7 +237,7 @@ export function PromotionSection() {
                     })}
                 </div>
                 
-                {/* Indicator dots - hanya tampilkan jika ada lebih dari itemsToShow promo */}
+                {/* Indicator dots - only show if there are more than itemsToShow promos */}
                 {eventOffers.length > itemsToShow && (
                     <div className="flex justify-center mt-4">
                         {Array.from({ length: eventOffers.length - itemsToShow + 1 }).map((_, index) => (

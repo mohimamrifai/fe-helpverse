@@ -3,6 +3,8 @@ import { type RouteConfig, index, route } from "@react-router/dev/routes";
 export default [
     index("routes/home.tsx"), // home (admin, eo, user)
     route("login", "routes/login.tsx"), // login
+    route("forgot-password", "routes/forgot-password.tsx"), // forgot password
+    route("change-password", "routes/change-password.tsx"), // change password
     route("register/event-organizer", "routes/register/event-organizer.tsx"), // register event organizer
     route("event/create", "routes/event/create.tsx"), // create event
     // route("event/create/seat-arrangement", "routes/event/create/seat-arrangement.tsx"), // seat arrangement

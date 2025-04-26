@@ -72,7 +72,7 @@ export function TicketSection() {
                         onClick={() => window.location.reload()} 
                         className="mt-2 bg-red-100 hover:bg-red-200 text-red-800 font-semibold py-1 px-3 rounded"
                     >
-                        Coba Lagi
+                        Try Again
                     </button>
                 </div>
             </div>
@@ -83,17 +83,17 @@ export function TicketSection() {
         return (
             <div className="bg-primary p-10">
                 <div className="text-center text-gray-600">
-                    <p>Tidak ada event tersedia saat ini.</p>
+                    <p>No events available at this time.</p>
                 </div>
             </div>
         );
     }
 
-    // Format tanggal ke format yang lebih mudah dibaca
+    // Format date to a more readable format
     const formatDate = (dateString: string | Date) => {
         try {
             const date = dateString instanceof Date ? dateString : new Date(dateString);
-            return date.toLocaleDateString('id-ID', { 
+            return date.toLocaleDateString('en-US', { 
                 day: 'numeric', 
                 month: 'long', 
                 year: 'numeric' 
@@ -105,13 +105,13 @@ export function TicketSection() {
 
     return (
         <div className="bg-primary p-10 relative">
-            <h1 className="text-secondary md:text-4xl text-2xl font-bold">Pesan Tiket Anda</h1>
+            <h1 className="text-secondary md:text-4xl text-2xl font-bold">Book Your Tickets</h1>
 
             <div className="relative mt-4">
                 <button 
                     onClick={prevSlide}
                     className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-secondary text-primary rounded-full w-10 h-10 flex items-center justify-center shadow-md hover:bg-secondary/90 transition-colors"
-                    aria-label="Slide sebelumnya"
+                    aria-label="Previous slide"
                 >
                     <FaChevronLeft />
                 </button>
@@ -128,7 +128,7 @@ export function TicketSection() {
                         >
                             <img 
                                 src={`http://localhost:5000/uploads/images/${event.image}`} 
-                                alt={event.name || "Gambar event"} 
+                                alt={event.name || "Event image"} 
                                 className="w-full h-full object-cover" 
                             />
                             <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
@@ -153,7 +153,7 @@ export function TicketSection() {
                 <button 
                     onClick={nextSlide}
                     className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-secondary text-primary rounded-full w-10 h-10 flex items-center justify-center shadow-md hover:bg-secondary/90 transition-colors"
-                    aria-label="Slide berikutnya"
+                    aria-label="Next slide"
                 >
                     <FaChevronRight />
                 </button>
@@ -164,7 +164,7 @@ export function TicketSection() {
                             key={index}
                             onClick={() => setCurrentIndex(index)}
                             className={`w-3 h-3 mx-1 rounded-full ${currentIndex === index ? 'bg-secondary' : 'bg-gray-300'}`}
-                            aria-label={`Pergi ke slide ${index + 1}`}
+                            aria-label={`Go to slide ${index + 1}`}
                         />
                     ))}
                 </div>

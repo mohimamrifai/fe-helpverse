@@ -2,15 +2,19 @@ export interface TicketType {
   id: string;
   name: string;
   description: string;
-  price: number;
+  price: string;
   quantity: number;
+  limit?: string;
+  rows?: number;
+  columns?: number;
   startDate?: string;
   endDate?: string;
+  saleEndDate?: string;
   seatArrangement?: {
     rows: number;
     columns: number;
   };
-  maxPerOrder?: number;
+  maxPerOrder?: number | string;
   category?: string;
 }
 
@@ -35,7 +39,9 @@ export interface Seat {
 
 export interface PromotionalOffer {
   id: string;
+  name: string;
   code: string;
+  description?: string;
   discountType: 'percentage' | 'fixed';
   discountValue: number;
   maxUses: number;
@@ -51,10 +57,9 @@ export interface EventDetails {
   date: string;
   time: string;
   location: string;
-  address: string;
-  image: string;
-  totalSeats: number;
-  tags: string[];
+  address?: string;
+  image?: string;
+  tags?: string[];
 }
 
 export interface SeatArrangement {

@@ -10,7 +10,7 @@ export default function LoginPage() {
     const navigate = useNavigate();
     const location = useLocation();
     
-    // Ambil data redirectTo dan paymentInfo dari location state
+    // Get redirectTo data and paymentInfo from location state
     const redirectTo = location.state?.redirectTo || "/";
     const paymentInfo = location.state?.paymentInfo || null;
 
@@ -32,18 +32,13 @@ export default function LoginPage() {
         e.preventDefault();
         setError(null);
         try {
-            console.log("Attempting login with:", formData.username);
-            // API login menggunakan email, bukan username (sesuai dokumentasi)
+            // API login uses email, not username (according to documentation)
             await login(formData.username, formData.password, formData.rememberMe);
             
-            // Refresh user data untuk memastikan user data ter-load dengan benar
-            console.log("Login successful, refreshing user data...");
+            // Refresh user data to ensure user data is loaded correctly
             await refreshUserData();
             
-            console.log("User data after refresh:", user);
-            console.log("Navigating to:", redirectTo);
-            
-            // Jika ada payment info, kirim kembali ke payment page dengan payment info
+            // If there is payment info, send back to payment page with payment info
             if (paymentInfo && redirectTo.includes('/payment')) {
                 navigate(redirectTo, { 
                     replace: true,
@@ -53,7 +48,6 @@ export default function LoginPage() {
                 navigate(redirectTo, { replace: true });
             }
         } catch (err) {
-            console.error("Login error:", err);
             setError(err instanceof Error ? err.message : "Login failed. Please try again.");
         }
     };
@@ -63,7 +57,7 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen bg-secondary flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-secondary flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-md">
                 <div className="text-center">
                     <img src="/logo-blue.png" alt="HELPVerse Logo" className="mx-auto h-16 w-16" />
@@ -71,7 +65,7 @@ export default function LoginPage() {
                     <p className="mt-2 text-sm text-gray-600">Login to your account</p>
                     {paymentInfo && (
                         <p className="mt-2 text-sm font-medium text-orange-600">
-                            Silakan login terlebih dahulu untuk melanjutkan pembayaran
+                            Please login first to continue with payment
                         </p>
                     )}
                 </div>
@@ -84,7 +78,7 @@ export default function LoginPage() {
                     <div className="rounded-md -space-y-px">
                         <div className="mb-4">
                             <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
-                                Email atau Username
+                                Email or Username
                             </label>
                             <input
                                 id="username"
@@ -92,7 +86,7 @@ export default function LoginPage() {
                                 type="text"
                                 required
                                 className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
-                                placeholder="Masukkan email atau username Anda"
+                                placeholder="Enter your email or username"
                                 value={formData.username}
                                 onChange={handleChange}
                             />
@@ -108,7 +102,7 @@ export default function LoginPage() {
                                     type={showPassword ? "text" : "password"}
                                     required
                                     className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
-                                    placeholder="Masukkan password Anda"
+                                    placeholder="Enter your password"
                                     value={formData.password}
                                     onChange={handleChange}
                                 />
@@ -138,13 +132,13 @@ export default function LoginPage() {
                                 onChange={handleChange}
                             />
                             <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                                Ingat saya
+                                Remember me
                             </label>
                         </div>
 
                         <div className="text-sm">
                             <Link to="/forgot-password" className="font-medium text-primary hover:text-primary/80">
-                                Lupa password?
+                                Forgot password?
                             </Link>
                         </div>
                     </div>
@@ -154,15 +148,15 @@ export default function LoginPage() {
                             type="submit"
                             className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                         >
-                            Masuk
+                            Login
                         </button>
                     </div>
 
                     <div className="text-center mt-4">
                         <p className="text-sm text-gray-600">
-                            Belum punya akun?{" "}
+                            Don't have an account?{" "}
                             <Link to="/register" className="font-medium text-primary hover:text-primary/80">
-                                Daftar
+                                Register
                             </Link>
                         </p>
                     </div>

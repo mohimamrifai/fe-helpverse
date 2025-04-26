@@ -1,10 +1,11 @@
 import React from 'react';
-import { FaCalendarAlt, FaClock, FaUsers } from 'react-icons/fa';
+import { FaCalendarAlt, FaClock } from 'react-icons/fa';
 import { FormInput } from './FormInput';
 import type { EventDetails } from './types';
 
 interface EventDetailsStepProps {
   eventDetails: EventDetails;
+  tagsString: string;
   onEventDetailsChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   imagePreview: string | null;
   onImageChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -15,12 +16,13 @@ interface EventDetailsStepProps {
 
 export function EventDetailsStep({
   eventDetails,
+  tagsString,
   onEventDetailsChange,
   imagePreview,
   onImageChange,
   onImageRemove,
   errors = {},
-  formTouched = true
+  formTouched = false
 }: EventDetailsStepProps) {
   return (
     <div className="space-y-4 sm:space-y-6 bg-secondary">
@@ -86,28 +88,15 @@ export function EventDetailsStep({
       />
 
       <FormInput
-        label="Capacity"
-        name="capacity"
-        type="number"
-        value={eventDetails.capacity}
+        label="Tags"
+        name="tags"
+        value={tagsString}
         onChange={onEventDetailsChange}
-        required
-        min={1}
-        icon={<FaUsers className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />}
-        placeholder="Enter maximum capacity"
-        error={errors.capacity}
+        placeholder="Enter tags separated by commas (e.g. technology, conference, jakarta)"
+        error={errors.tags}
+        information='( Add relevant tags to help people find your event )'
         formTouched={formTouched}
       />
-
-      {/* input hastags */}
-      {/* <FormInput
-        label="Hashtags"
-        name="hashtags"
-        value={eventDetails.hashtags}
-        onChange={onEventDetailsChange}
-        placeholder="Enter hashtags"
-        error={errors.hashtags}
-      /> */}
 
       <div>
         <h2 className="text-base sm:text-lg font-semibold text-gray-900">Event Poster</h2>

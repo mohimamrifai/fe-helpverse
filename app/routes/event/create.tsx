@@ -10,12 +10,31 @@ import { NavigationButtons } from '~/components/event-form/NavigationButtons';
 import type { EventDetails, TicketType, PromotionalOffer } from '~/components/event-form/types';
 import { AuthGuard } from '~/components/AuthGuard';
 import { eventService } from '~/services/event';
+import type { Event } from '~/services/event';
 
 export function meta() {
   return [
     { title: "Create Event - Helpverse" },
     { name: "description", content: "Create a new event" },
   ];
+}
+
+// Definisi tipe untuk respons dari API
+interface EventResponse {
+  id: string;
+  _id: string;
+  name: string;
+  tickets?: {
+    _id: string;
+    name: string;
+    [key: string]: any;
+  }[];
+  ticketTypes?: {
+    _id: string;
+    name: string;
+    [key: string]: any;
+  }[];
+  [key: string]: any;
 }
 
 export default function CreateEvent() {
@@ -32,6 +51,7 @@ export default function CreateEvent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [formTouched, setFormTouched] = useState(false); // Flag untuk menandai form sudah disentuh
+  const [touchedFields, setTouchedFields] = useState<{[key: string]: boolean}>({}); // Track which fields have been touched
 
   // Development data
   const [eventDetails, setEventDetails] = useState<EventDetails>({
@@ -40,8 +60,10 @@ export default function CreateEvent() {
     date: '',
     time: '',
     location: '',
-    capacity: 0,
+    image: '',
+    tags: [],
   });
+  const [tagsString, setTagsString] = useState<string>('');
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
   const [newTicketType, setNewTicketType] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -50,91 +72,168 @@ export default function CreateEvent() {
   // Promotional Offers state
   const [promotionalOffers, setPromotionalOffers] = useState<PromotionalOffer[]>([]);
 
-  // Validasi form di setiap step, hanya jika form sudah disentuh
+  // Modifikasi useEffect untuk validasi
   useEffect(() => {
-    if (formTouched) {
+    // Validasi hanya jika ada field yang telah disentuh
+    // atau jika formTouched aktif (saat mencoba next)
+    if (Object.keys(touchedFields).length > 0 || formTouched) {
       validateCurrentStep();
     }
-  }, [eventDetails, ticketTypes, currentStep, formTouched]);
+  }, [eventDetails, ticketTypes, promotionalOffers, currentStep, touchedFields, formTouched]);
 
   const validateCurrentStep = () => {
     const newErrors: {[key: string]: string} = {};
     
     // Validasi Step 1: Event Details
     if (currentStep === 1) {
-      if (!eventDetails.name) newErrors.name = 'Nama acara wajib diisi';
-      if (!eventDetails.description) newErrors.description = 'Deskripsi acara wajib diisi';
-      if (!eventDetails.date) newErrors.date = 'Tanggal acara wajib diisi';
-      if (!eventDetails.time) newErrors.time = 'Waktu acara wajib diisi';
-      if (!eventDetails.location) newErrors.location = 'Lokasi acara wajib diisi';
-      if (!eventDetails.capacity || eventDetails.capacity <= 0) 
-        newErrors.capacity = 'Kapasitas harus lebih dari 0';
-      // if (!imagePreview) newErrors.image = 'Poster acara wajib diupload';
+      // Validasi hanya untuk field yang telah disentuh
+      if (touchedFields['name'] && !eventDetails.name) 
+        newErrors.name = 'Nama acara wajib diisi';
+      if (touchedFields['description'] && !eventDetails.description) 
+        newErrors.description = 'Deskripsi acara wajib diisi';
+      if (touchedFields['date'] && !eventDetails.date) 
+        newErrors.date = 'Tanggal acara wajib diisi';
+      if (touchedFields['time'] && !eventDetails.time) 
+        newErrors.time = 'Waktu acara wajib diisi';
+      if (touchedFields['location'] && !eventDetails.location) 
+        newErrors.location = 'Lokasi acara wajib diisi';
+      // if (touchedFields['image'] && !imagePreview) newErrors.image = 'Poster acara wajib diupload';
     }
     
     // Validasi Step 2: Ticket Types
     else if (currentStep === 2) {
-      if (ticketTypes.length === 0) {
+      // Validasi keberadaan tiket hanya jika formTouched
+      if (formTouched && ticketTypes.length === 0) {
         newErrors.ticketTypes = 'Minimal harus ada 1 tipe tiket';
       } else {
+        // Validasi tiap field tiket hanya jika field tersebut telah disentuh
         ticketTypes.forEach((ticket, index) => {
-          if (!ticket.name) newErrors[`ticket-${index}-name`] = 'Nama tiket wajib diisi';
-          if (!ticket.price || parseInt(ticket.price) <= 0) 
-            newErrors[`ticket-${index}-price`] = 'Harga tiket harus lebih dari 0';
-          if (!ticket.limit || parseInt(ticket.limit) <= 0)
-            newErrors[`ticket-${index}-limit`] = 'Jumlah tiket harus lebih dari 0';
+          const ticketNameKey = `ticket-${index}-name`;
+          const ticketPriceKey = `ticket-${index}-price`;
+          const ticketLimitKey = `ticket-${index}-limit`;
+
+          if (touchedFields[ticketNameKey] && !ticket.name) 
+            newErrors[ticketNameKey] = 'Nama tiket wajib diisi';
+          if (touchedFields[ticketPriceKey] && (!ticket.price || parseInt(ticket.price) <= 0))
+            newErrors[ticketPriceKey] = 'Harga tiket harus lebih dari 0';
+          if (touchedFields[ticketLimitKey] && (!ticket.limit || parseInt(ticket.limit) <= 0))
+            newErrors[ticketLimitKey] = 'Jumlah tiket harus lebih dari 0';
         });
       }
     }
     
     // Validasi Step 3: Seat Arrangement
     else if (currentStep === 3) {
+      // Validasi seat arrangement hanya jika form telah disentuh
       const hasSeatArrangement = ticketTypes.some(t => (t.rows || 0) > 0 && (t.columns || 0) > 0);
-      if (!hasSeatArrangement && ticketTypes.length > 0) {
+      if (formTouched && !hasSeatArrangement && ticketTypes.length > 0) {
         newErrors.seatArrangement = 'Minimal satu tipe tiket harus memiliki pengaturan kursi';
       }
     }
     
     // Validasi Step 4: Promotional Offers (opsional)
     else if (currentStep === 4) {
-      // Validasi format kode promo jika ada
+      // Validasi format kode promo hanya jika field tersebut telah disentuh
       promotionalOffers.forEach((promo, index) => {
-        if (!promo.name) {
-          newErrors[`promo-${index}-name`] = 'Nama promo wajib diisi';
+        const nameKey = `promo-${index}-name`;
+        const codeKey = `promo-${index}-code`;
+        const validFromKey = `promo-${index}-validFrom`;
+        const validUntilKey = `promo-${index}-validUntil`;
+        const discountValueKey = `promo-${index}-discountValue`;
+        const dateRangeKey = `promo-${index}-dateRange`;
+        
+        if (touchedFields[nameKey] && !promo.name) {
+          newErrors[nameKey] = 'Nama promo wajib diisi';
         }
-        if (!promo.code) {
-          newErrors[`promo-${index}-code`] = 'Kode promo wajib diisi';
-        } else if (!/^[A-Z0-9_-]+$/.test(promo.code)) {
-          newErrors[`promo-${index}-code`] = 'Kode promo hanya boleh berisi huruf kapital, angka, underscore, dan dash';
+        if (touchedFields[codeKey]) {
+          if (!promo.code) {
+            newErrors[codeKey] = 'Kode promo wajib diisi';
+          } else if (!/^[A-Z0-9_-]+$/.test(promo.code)) {
+            newErrors[codeKey] = 'Kode promo hanya boleh berisi huruf kapital, angka, underscore, dan dash';
+          }
         }
-        if (!promo.validFrom) {
-          newErrors[`promo-${index}-validFrom`] = 'Tanggal mulai berlaku wajib diisi';
+        if (touchedFields[validFromKey] && !promo.validFrom) {
+          newErrors[validFromKey] = 'Tanggal mulai berlaku wajib diisi';
         }
-        if (!promo.validUntil) {
-          newErrors[`promo-${index}-validUntil`] = 'Tanggal berakhir wajib diisi';
+        if (touchedFields[validUntilKey] && !promo.validUntil) {
+          newErrors[validUntilKey] = 'Tanggal berakhir wajib diisi';
         }
-        if (promo.validFrom && promo.validUntil && new Date(promo.validFrom) > new Date(promo.validUntil)) {
-          newErrors[`promo-${index}-dateRange`] = 'Tanggal mulai harus sebelum tanggal berakhir';
+        if ((touchedFields[dateRangeKey] || (touchedFields[validFromKey] && touchedFields[validUntilKey])) && 
+            promo.validFrom && promo.validUntil && new Date(promo.validFrom) > new Date(promo.validUntil)) {
+          newErrors[dateRangeKey] = 'Tanggal mulai harus sebelum tanggal berakhir';
         }
-        if (promo.discountValue <= 0) {
-          newErrors[`promo-${index}-discountValue`] = 'Nilai diskon harus lebih dari 0';
+        if (touchedFields[discountValueKey] && promo.discountValue <= 0) {
+          newErrors[discountValueKey] = 'Nilai diskon harus lebih dari 0';
         }
-        if (promo.discountType === 'percentage' && promo.discountValue > 100) {
-          newErrors[`promo-${index}-discountValue`] = 'Nilai diskon persentase tidak boleh lebih dari 100%';
+        if (touchedFields[discountValueKey] && promo.discountType === 'percentage' && promo.discountValue > 100) {
+          newErrors[discountValueKey] = 'Nilai diskon persentase tidak boleh lebih dari 100%';
         }
       });
     }
     
     setErrors(newErrors);
-    setIsFormValid({
-      ...isFormValid,
-      [currentStep]: Object.keys(newErrors).length === 0
-    });
+    
+    // Cek validitas dari step saat ini berdasarkan error
+    // Jika form sudah disentuh menyeluruh, cek semua error
+    // Jika belum, hanya cek error dari field yang telah disentuh
+    if (formTouched) {
+      setIsFormValid({
+        ...isFormValid,
+        [currentStep]: Object.keys(newErrors).length === 0
+      });
+    } else {
+      // Cek apakah ada error pada field yang telah disentuh
+      const touchedFieldsWithErrors = Object.keys(newErrors).filter(key => touchedFields[key]);
+      setIsFormValid({
+        ...isFormValid,
+        [currentStep]: touchedFieldsWithErrors.length === 0
+      });
+    }
   };
 
   const handleNext = () => {
-    setFormTouched(true); // Mark form as touched when user tries to navigate
+    // Tandai semua field pada step ini sebagai telah disentuh
+    const currentStepFields = new Set<string>();
+    
+    if (currentStep === 1) {
+      // Step 1: Event Details
+      ['name', 'description', 'date', 'time', 'location', 'tags', 'image'].forEach(field => 
+        currentStepFields.add(field)
+      );
+    } else if (currentStep === 2) {
+      // Step 2: Ticket Types
+      ticketTypes.forEach((_, index) => {
+        currentStepFields.add(`ticket-${index}-name`);
+        currentStepFields.add(`ticket-${index}-price`);
+        currentStepFields.add(`ticket-${index}-limit`);
+      });
+      currentStepFields.add('ticketTypes');
+    } else if (currentStep === 3) {
+      // Step 3: Seat Arrangement
+      currentStepFields.add('seatArrangement');
+    } else if (currentStep === 4) {
+      // Step 4: Promotional Offers
+      promotionalOffers.forEach((_, index) => {
+        currentStepFields.add(`promo-${index}-name`);
+        currentStepFields.add(`promo-${index}-code`);
+        currentStepFields.add(`promo-${index}-validFrom`);
+        currentStepFields.add(`promo-${index}-validUntil`);
+        currentStepFields.add(`promo-${index}-discountValue`);
+      });
+    }
+    
+    // Tandai semua field pada step ini sebagai telah disentuh
+    const updatedTouchedFields = {...touchedFields};
+    Array.from(currentStepFields).forEach(field => {
+      updatedTouchedFields[field] = true;
+    });
+    setTouchedFields(updatedTouchedFields);
+    setFormTouched(true);
+    
+    // Validasi ulang dengan semua field step ini disentuh
     validateCurrentStep();
+    
+    // Lanjutkan jika valid
     if (isFormValid[currentStep]) {
       if (currentStep < 4) {
         setCurrentStep(currentStep + 1);
@@ -160,12 +259,31 @@ export default function CreateEvent() {
 
   const handleEventDetailsChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setEventDetails(prev => ({
+    
+    // Khusus untuk tags, simpan string asli dan update array hanya untuk internal state
+    if (name === 'tags') {
+      setTagsString(value); // Simpan string mentah
+      
+      // Tetap update array tags di eventDetails untuk diproses nanti
+      const tagsArray = value.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
+      setEventDetails(prev => ({
+        ...prev,
+        [name]: tagsArray
+      }));
+    } else {
+      setEventDetails(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+    
+    // Mark specific field as touched
+    setTouchedFields(prev => ({
       ...prev,
-      [name]: value
+      [name]: true
     }));
     
-    // Mark as touched when user changes form values
+    // Mark form as touched when user changes form values
     if (!formTouched) {
       setFormTouched(true);
     }
@@ -211,19 +329,25 @@ export default function CreateEvent() {
     e.preventDefault();
     if (newTicketType.trim()) {
       const id = Date.now().toString();
+      const today = new Date().toISOString().split('T')[0]; // Format YYYY-MM-DD
+      
       setTicketTypes(prev => [
         ...prev,
         { 
           id, 
           name: newTicketType.trim(), 
-          price: '100000', 
-          limit: '50', 
+          price: '100000',
+          quantity: 50,
+          limit: '50',
           rows: 5, 
           columns: 10,
           description: `Tiket ${newTicketType.trim()}`,
           category: 'Regular',
           maxPerOrder: '4',
-          saleEndDate: eventDetails.date
+          startDate: today, // Gunakan tanggal hari ini sebagai default
+          saleEndDate: eventDetails.date || today, // Gunakan tanggal event atau hari ini
+          status: 'active',
+          bookedSeats: []
         }
       ]);
       setNewTicketType('');
@@ -249,6 +373,14 @@ export default function CreateEvent() {
       ticketType.id === id ? { ...ticketType, [field]: value } : ticketType
     ));
     
+    // Find the index of the ticket being modified
+    const index = ticketTypes.findIndex(ticket => ticket.id === id);
+    // Mark specific field as touched
+    setTouchedFields(prev => ({
+      ...prev,
+      [`ticket-${index}-${field}`]: true
+    }));
+    
     // Mark as touched when user changes ticket type details
     if (!formTouched) {
       setFormTouched(true);
@@ -256,8 +388,16 @@ export default function CreateEvent() {
   };
 
   // Promo handling functions
-  const handleAddPromo = (promo: PromotionalOffer) => {
-    setPromotionalOffers(prev => [...prev, promo]);
+  const handleAddPromo = (promo: Omit<PromotionalOffer, 'id'>) => {
+    const id = Date.now().toString();
+    const newPromo: PromotionalOffer = {
+      ...promo,
+      id,
+      currentUses: 0, // Pastikan selalu 0 untuk promo baru
+      active: true // Pastikan selalu true untuk promo baru
+    };
+    
+    setPromotionalOffers(prev => [...prev, newPromo]);
     
     // Mark as touched when user adds a promo
     if (!formTouched) {
@@ -281,6 +421,14 @@ export default function CreateEvent() {
       )
     );
     
+    // Find the index of the promo being modified
+    const index = promotionalOffers.findIndex(promo => promo.id === id);
+    // Mark specific field as touched
+    setTouchedFields(prev => ({
+      ...prev,
+      [`promo-${index}-${field}`]: true
+    }));
+    
     // Mark as touched when user changes promo details
     if (!formTouched) {
       setFormTouched(true);
@@ -292,172 +440,62 @@ export default function CreateEvent() {
       setIsSubmitting(true);
       setSubmitError(null);
       
-      // Membuat struktur data untuk dikirim ke server
-      const formattedTicketTypes = ticketTypes.map(ticket => ({
+      // Format tiket sesuai format yang diharapkan
+      const formattedTickets = ticketTypes.map(ticket => ({
         name: ticket.name,
-        price: parseInt(ticket.price),
-        category: ticket.category || ticket.name,
         description: ticket.description || `Tiket ${ticket.name}`,
-        quantity: parseInt(ticket.limit),
-        maxPerOrder: parseInt(ticket.maxPerOrder || '4'),
-        saleEndDate: ticket.saleEndDate || eventDetails.date // Default to event date if not set
+        price: parseInt(ticket.price),
+        quantity: ticket.limit ? parseInt(ticket.limit) : ticket.quantity,
+        startDate: new Date(ticket.startDate || eventDetails.date).toISOString(),
+        endDate: new Date(ticket.saleEndDate || eventDetails.date).toISOString(),
+        status: "active",
+        seatArrangement: {
+          rows: ticket.rows || 0,
+          columns: ticket.columns || 0
+        },
+        bookedSeats: []
       }));
 
-      // Membuat objek seatArrangement untuk memenuhi persyaratan validasi API
-      // Ambil tipe tiket dengan pengaturan kursi terbanyak sebagai dasar
-      const ticketWithLargestSeatConfig = [...ticketTypes].sort((a, b) => 
-        ((b.rows || 0) * (b.columns || 0)) - ((a.rows || 0) * (a.columns || 0))
-      )[0];
+      // Hitung total kapasitas dari semua tiket
+      const totalCapacity = formattedTickets.reduce((total, ticket) => {
+        return total + ticket.quantity;
+      }, 0);
       
-      // Buat struktur seatArrangement minimal yang diperlukan
-      const seatArrangement = {
-        rows: ticketWithLargestSeatConfig?.rows || 1,
-        columns: ticketWithLargestSeatConfig?.columns || 1,
-        seats: [
-          {
-            id: "A1",
-            status: "available" as "available" | "reserved" | "selected" | "booked",
-            price: parseInt(ticketWithLargestSeatConfig?.price || "0")
-          }
-        ]
-      };
+      // Format promo sesuai yang diharapkan
+      const formattedPromos = promotionalOffers.map(promo => ({
+        name: promo.name,
+        description: promo.description || "",
+        code: promo.code,
+        discountType: promo.discountType,
+        discountValue: promo.discountValue,
+        maxUses: promo.maxUses,
+        currentUses: promo.currentUses,
+        validFrom: new Date(promo.validFrom).toISOString(),
+        validUntil: new Date(promo.validUntil).toISOString(),
+        active: promo.active
+      }));
 
-      // Format final sesuai dengan yang diinginkan server
+      // Buat data event sesuai format yang diharapkan server
       const eventData = {
         name: eventDetails.name,
         description: eventDetails.description,
-        date: eventDetails.date,
+        date: new Date(eventDetails.date).toISOString(),
         time: eventDetails.time,
         location: eventDetails.location,
-        image: imageFile ? imageFile.name : "event-poster.jpg", // Ubah ini sesuai dengan upload file yang sebenarnya
-        capacity: eventDetails.capacity,
-        ticketTypes: formattedTicketTypes,
-        seatArrangement: seatArrangement,
-        promotionalOffers
+        image: imageFile ? imageFile.name : "event-poster.jpg",
+        totalSeats: totalCapacity,
+        availableSeats: totalCapacity,
+        published: true,
+        approvalStatus: "pending",
+        tags: eventDetails.tags || [],
+        tickets: formattedTickets,
+        promotionalOffers: formattedPromos
       };
 
       console.log('Data yang akan dikirim ke server:', eventData);
       
-      // Kirim data ke API
-      // Karena format data API berbeda, kita perlu menyesuaikan dengan format API
-      const apiEventData = {
-        name: eventData.name,
-        description: eventData.description,
-        date: eventData.date,
-        time: eventData.time,
-        location: eventData.location,
-        address: eventData.location,
-        category: "Event",
-        image: eventData.image,
-        totalSeats: eventData.capacity,
-        availableSeats: eventData.capacity,
-        ticketTypes: formattedTicketTypes.map(ticket => ({
-          _id: Date.now() + Math.random().toString(36).substring(2, 9),
-          id: Date.now() + Math.random().toString(36).substring(2, 9),
-          name: ticket.name,
-          description: ticket.description,
-          price: ticket.price.toString(),
-          category: ticket.category,
-          available: ticket.quantity,
-          total: ticket.quantity,
-          maxPerOrder: ticket.maxPerOrder,
-          limit: ticket.quantity.toString()
-        })),
-        seatArrangement: seatArrangement,
-        published: true,
-        organizer: {
-          _id: "", // Akan diisi oleh server berdasarkan token
-          name: "", // Akan diisi oleh server berdasarkan token
-          email: "" // Akan diisi oleh server berdasarkan token
-        },
-        approvalStatus: "pending",
-        approvalNotes: "",
-        createdAt: new Date().toISOString(),
-        promotionalOffers
-      };
-
-      const response = await eventService.createEvent(apiEventData as any);
+      const response = await eventService.createEvent(eventData as any) as unknown as EventResponse;
       console.log('Response dari server:', response);
-      
-      // Setelah event dibuat, buat kursi untuk setiap tipe tiket
-      if (response && response.id) {
-        const eventId = response.id;
-        
-        // Cari tiket yang memiliki konfigurasi kursi
-        const ticketsWithSeats = ticketTypes.filter(
-          ticket => ticket.rows && ticket.columns && ticket.rows > 0 && ticket.columns > 0
-        );
-        
-        if (ticketsWithSeats.length > 0) {
-          try {
-            // Hitung total kapasitas dari event
-            const totalCapacity = parseInt(eventDetails.capacity.toString());
-            
-            // Buat array untuk ticketDistribution
-            const ticketDistribution = [];
-            let totalAllocatedSeats = 0;
-            
-            // Cari ID tiket dari response untuk setiap tiket
-            for (const ticket of ticketsWithSeats) {
-              // Cari tiket di response berdasarkan nama
-              const createdTicket = response.ticketTypes?.find(
-                (t: any) => t.name === ticket.name
-              );
-              
-              if (createdTicket && createdTicket._id) {
-                // Gunakan quantity dari limit tiket, bukan rows x columns
-                const seatCount = parseInt(ticket.limit);
-                
-                // Pastikan tidak melebihi kapasitas yang tersisa
-                const availableCount = Math.min(seatCount, totalCapacity - totalAllocatedSeats);
-                
-                if (availableCount > 0) {
-                  ticketDistribution.push({
-                    ticketType: createdTicket._id,
-                    count: availableCount
-                  });
-                  
-                  totalAllocatedSeats += availableCount;
-                }
-              }
-            }
-            
-            if (ticketDistribution.length > 0 && totalAllocatedSeats > 0) {
-              // Hitung jumlah baris dan kursi per baris berdasarkan total kursi
-              // yang akan dialokasikan
-              const seatsPerRow = 25; // Standar, bisa disesuaikan
-              const totalRows = Math.ceil(totalAllocatedSeats / seatsPerRow);
-              
-              // Pastikan tidak melebihi batas alfabet A-Z
-              const maxRows = Math.min(totalRows, 26); // Maksimal 26 baris (A-Z)
-              
-              // Format rows dalam bentuk "A-X" sesuai jumlah baris
-              const startRow = 'A';
-              const endRow = String.fromCharCode(startRow.charCodeAt(0) + maxRows - 1);
-              const rowsFormat = `${startRow}-${endRow}`;
-              
-              // Buat kursi massal untuk semua tipe tiket sekaligus
-              await eventService.createBulkSeats(
-                eventId,
-                {
-                  section: "SECTION-A",
-                  rows: rowsFormat,
-                  seatsPerRow: seatsPerRow,
-                  basePrice: parseInt(ticketsWithSeats[0].price || "0"),
-                  ticketDistribution: ticketDistribution,
-                  seatNumbering: 'alpha',
-                  useTicketTypePrice: true
-                }
-              );
-              console.log(`Kursi untuk ${ticketDistribution.length} tipe tiket berhasil dibuat dengan total ${totalAllocatedSeats} kursi`);
-            } else {
-              console.error('Tidak ada kursi yang dapat dialokasikan, periksa kapasitas event dan jumlah tiket');
-            }
-          } catch (error) {
-            console.error(`Error membuat kursi:`, error);
-          }
-        }
-      }
       
       // Tampilkan modal sukses
       setShowSuccessModal(true);
@@ -478,6 +516,7 @@ export default function CreateEvent() {
       title: 'Event Details', 
       component: <EventDetailsStep 
         eventDetails={eventDetails}
+        tagsString={tagsString}
         onEventDetailsChange={handleEventDetailsChange}
         imagePreview={imagePreview}
         onImageChange={handleImageChange}
@@ -496,6 +535,7 @@ export default function CreateEvent() {
         onRemoveTicketType={handleRemoveTicketType}
         onTicketTypeChange={handleTicketTypeChange}
         errors={errors}
+        formTouched={formTouched}
       /> 
     },
     { 
@@ -508,6 +548,7 @@ export default function CreateEvent() {
           ));
         }}
         errors={errors}
+        formTouched={formTouched}
       /> 
     },
     { 
@@ -518,6 +559,7 @@ export default function CreateEvent() {
         onRemovePromo={handleRemovePromo}
         onPromoChange={handlePromoChange}
         errors={errors}
+        formTouched={formTouched}
       /> 
     },
   ];
@@ -544,9 +586,11 @@ export default function CreateEvent() {
                   <div className="mt-3 p-2 sm:p-3 bg-red-50 border border-red-200 rounded-md">
                     <h3 className="text-xs sm:text-sm font-medium text-red-800">Harap perbaiki error berikut:</h3>
                     <ul className="mt-1 text-xs sm:text-sm text-red-700 list-disc list-inside">
-                      {Object.values(errors).map((error, index) => (
-                        <li key={index}>{error}</li>
-                      ))}
+                      {Object.values(errors)
+                        .filter(error => error) // Hanya tampilkan error yang ada nilainya
+                        .map((error, index) => (
+                          <li key={index}>{error}</li>
+                        ))}
                     </ul>
                   </div>
                 )}

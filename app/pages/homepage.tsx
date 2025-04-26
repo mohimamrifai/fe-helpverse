@@ -20,7 +20,7 @@ export default function Homepage() {
       <Hero />
       <TicketSection />
       
-      {/* Menampilkan konten berdasarkan role yang valid */}
+      {/* Display content based on valid role */}
       {!loading && (
         <>
           {isRegularUser && <PromotionSection />}

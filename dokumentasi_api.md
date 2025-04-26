@@ -691,6 +691,228 @@ const loginWithEmail = async (email, password) => {
 };
 ```
 
+### Contoh Implementasi Mengubah Password:
+```javascript
+// Mengubah password pengguna
+const changePassword = async (currentPassword, newPassword) => {
+  try {
+    const response = await fetch('/api/auth/change-password', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({
+        currentPassword,
+        newPassword
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Gagal mengubah password');
+    }
+    
+    const data = await response.json();
+    
+    // Update token jika ada token baru yang diberikan
+    if (data.token) {
+      localStorage.setItem('token', data.token);
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error changing password:', error);
+    throw error;
+  }
+};
+
+// Contoh penggunaan:
+const handleChangePassword = async (currentPassword, newPassword) => {
+  try {
+    const result = await changePassword(currentPassword, newPassword);
+    
+    if (result.success) {
+      console.log('Password berhasil diubah');
+      // Tampilkan pesan sukses ke pengguna
+    }
+  } catch (error) {
+    console.error('Gagal mengubah password:', error);
+    // Tampilkan pesan error ke pengguna
+  }
+};
+```
+
+#### Format Request:
+```json
+{
+  "currentPassword": "password_lama",
+  "newPassword": "password_baru"
+}
+```
+
+#### Response Success (200 OK):
+```json
+{
+  "success": true,
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+#### Kemungkinan Error Response:
+1. **Current password salah (401 Unauthorized)**:
+   ```json
+   {
+     "success": false,
+     "error": "Current password is incorrect"
+   }
+   ```
+
+2. **Password baru terlalu pendek (400 Bad Request)**:
+   ```json
+   {
+     "success": false,
+     "error": "New password must be at least 6 characters"
+   }
+   ```
+
+3. **Input tidak lengkap (400 Bad Request)**:
+   ```json
+   {
+     "success": false,
+     "error": "Please provide current password and new password"
+   }
+   ```
+
+4. **User tidak ditemukan (404 Not Found)**:
+   ```json
+   {
+     "success": false,
+     "error": "User not found"
+   }
+   ```
+
+5. **Kesalahan validasi (400 Bad Request)**:
+   ```json
+   {
+     "success": false,
+     "error": ["Password saat ini tidak boleh kosong", "Password baru harus minimal 6 karakter"]
+   }
+   ```
+
+#### Implementasi Form Ubah Password:
+```jsx
+import { useState } from 'react';
+
+const ChangePasswordForm = () => {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const validateForm = () => {
+    if (!currentPassword) {
+      setError('Password saat ini tidak boleh kosong');
+      return false;
+    }
+    if (!newPassword) {
+      setError('Password baru tidak boleh kosong');
+      return false;
+    }
+    if (newPassword.length < 6) {
+      setError('Password baru harus minimal 6 karakter');
+      return false;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('Password baru dan konfirmasi password tidak sama');
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const result = await changePassword(currentPassword, newPassword);
+      
+      if (result.success) {
+        setSuccess('Password berhasil diubah');
+        // Reset form fields
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      }
+    } catch (error) {
+      setError(error.message || 'Gagal mengubah password');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <h2>Ubah Password</h2>
+      
+      {error && <div className="error-message">{error}</div>}
+      {success && <div className="success-message">{success}</div>}
+      
+      <div className="form-group">
+        <label htmlFor="currentPassword">Password Saat Ini</label>
+        <input
+          type="password"
+          id="currentPassword"
+          value={currentPassword}
+          onChange={(e) => setCurrentPassword(e.target.value)}
+          disabled={loading}
+          required
+        />
+      </div>
+      
+      <div className="form-group">
+        <label htmlFor="newPassword">Password Baru</label>
+        <input
+          type="password"
+          id="newPassword"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          disabled={loading}
+          required
+          minLength={6}
+        />
+      </div>
+      
+      <div className="form-group">
+        <label htmlFor="confirmPassword">Konfirmasi Password Baru</label>
+        <input
+          type="password"
+          id="confirmPassword"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          disabled={loading}
+          required
+        />
+      </div>
+      
+      <button type="submit" disabled={loading}>
+        {loading ? 'Memproses...' : 'Ubah Password'}
+      </button>
+    </form>
+  );
+};
+
+export default ChangePasswordForm;
+```
+
 ### Flow Autentikasi:
 1. Pengguna melakukan login melalui `/api/auth/login` dengan username atau email
 2. Backend memvalidasi kredensial dan mengembalikan token JWT

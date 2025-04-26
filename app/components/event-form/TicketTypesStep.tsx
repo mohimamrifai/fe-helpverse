@@ -11,6 +11,7 @@ interface TicketTypesStepProps {
   onRemoveTicketType: (id: string) => void;
   onTicketTypeChange: (id: string, field: keyof TicketType, value: string) => void;
   errors?: {[key: string]: string};
+  formTouched?: boolean;
 }
 
 export function TicketTypesStep({
@@ -20,7 +21,8 @@ export function TicketTypesStep({
   onAddTicketType,
   onRemoveTicketType,
   onTicketTypeChange,
-  errors = {}
+  errors = {},
+  formTouched = false
 }: TicketTypesStepProps) {
   return (
     <div className="space-y-4 sm:space-y-6 bg-secondary">
@@ -53,7 +55,7 @@ export function TicketTypesStep({
           </button>
         </div>
 
-        {errors.ticketTypes && (
+        {formTouched && errors.ticketTypes && (
           <p className="mt-2 text-xs sm:text-sm text-red-600">{errors.ticketTypes}</p>
         )}
 
@@ -132,19 +134,30 @@ export function TicketTypesStep({
                     <p className="mt-1 text-xs sm:text-sm text-red-600">{errors[`ticket-${index}-limit`]}</p>
                   )}
                 </div>
-              </div>
-              
-              <div>
-                <label htmlFor={`saleEndDate-${type.id}`} className="block text-xs sm:text-sm font-semibold text-gray-700">
-                  Sale End Date
-                </label>
-                <input
-                  type="date"
-                  id={`saleEndDate-${type.id}`}
-                  value={type.saleEndDate || ''}
-                  onChange={(e) => onTicketTypeChange(type.id, 'saleEndDate', e.target.value)}
-                  className="mt-1 block w-full px-3 py-2 sm:px-4 sm:py-3 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm transition duration-150 ease-in-out"
-                />
+                <div>
+                  <label htmlFor={`startDate-${type.id}`} className="block text-xs sm:text-sm font-semibold text-gray-700">
+                    Sale Start Date
+                  </label>
+                  <input
+                    type="date"
+                    id={`startDate-${type.id}`}
+                    value={type.startDate || ''}
+                    onChange={(e) => onTicketTypeChange(type.id, 'startDate', e.target.value)}
+                    className="mt-1 block w-full px-3 py-2 sm:px-4 sm:py-3 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm transition duration-150 ease-in-out"
+                  />
+                </div>
+                <div>
+                  <label htmlFor={`saleEndDate-${type.id}`} className="block text-xs sm:text-sm font-semibold text-gray-700">
+                    Sale End Date
+                  </label>
+                  <input
+                    type="date"
+                    id={`saleEndDate-${type.id}`}
+                    value={type.saleEndDate || ''}
+                    onChange={(e) => onTicketTypeChange(type.id, 'saleEndDate', e.target.value)}
+                    className="mt-1 block w-full px-3 py-2 sm:px-4 sm:py-3 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm transition duration-150 ease-in-out"
+                  />
+                </div>
               </div>
             </div>
           ))}

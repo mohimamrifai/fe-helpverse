@@ -25,7 +25,7 @@ export default function SeatMap({ tickets, generatedSeats, selectedSeats, onSeat
   // Function to format Malaysian Ringgit currency
   const formatRinggit = (amount: number | string) => {
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-    return `RM ${numAmount.toFixed(2)}`;
+    return `RM ${numAmount.toFixed(0)}`;
   };
 
   // Determine seat status

@@ -53,7 +53,7 @@ export default function EventDetailPage() {
         return (
             <div className="py-6 md:py-28 px-4 md:px-8 lg:px-16">
                 <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded relative" role="alert">
-                    <span className="block sm:inline">{error || 'Event tidak ditemukan'}</span>
+                    <span className="block sm:inline">{error || 'Event not found'}</span>
                 </div>
             </div>
         );
@@ -106,7 +106,7 @@ export default function EventDetailPage() {
                     </div>
 
                     <Link to={`/event/${event.id}/book`} className="mt-3 text-center bg-secondary text-primary py-2 px-4 rounded-md font-bold hover:bg-secondary/90 transition-colors text-sm">
-                        Pesan Tiket
+                        Book Tickets
                     </Link>
 
                     {event.promotionalOffers && event.promotionalOffers.length > 0 && (
@@ -114,13 +114,13 @@ export default function EventDetailPage() {
                             <div className="flex items-start gap-2 text-yellow-800 text-sm">
                                 <FaInfoCircle className="mt-0.5" />
                                 <div>
-                                    <p className="font-bold">Promo Tersedia!</p>
+                                    <p className="font-bold">Promo Available!</p>
                                     {event.promotionalOffers.map(promo => (
                                         <p key={promo.code}>
-                                            Gunakan kode <span className="font-mono font-semibold">{promo.code}</span> untuk
+                                            Use code <span className="font-mono font-semibold">{promo.code}</span> for
                                             {promo.discountType === 'percentage' ?
-                                                ` diskon ${promo.discountValue}%` :
-                                                ` potongan RM ${promo.discountValue}`}
+                                                ` ${promo.discountValue}% discount` :
+                                                ` RM${promo.discountValue} off`}
                                         </p>
                                     ))}
                                 </div>
