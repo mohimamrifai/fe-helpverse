@@ -50,6 +50,8 @@ export default function MyBookingsPage(): React.ReactElement {
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
   const [modalType, setModalType] = useState<'success' | 'error'>('success');
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState<string | null>(null);
 
   const fetchBookings = async () => {
     try {
@@ -165,24 +167,27 @@ export default function MyBookingsPage(): React.ReactElement {
   }, []);
 
   const handleCancelBooking = async (bookingId: string) => {
-    // Konfirmasi pembatalan dari pengguna
-    if (!window.confirm('Apakah Anda yakin ingin membatalkan pemesanan ini? Tiket yang sudah dibatalkan tidak dapat dikembalikan.')) {
-      return;
-    }
+    setBookingToCancel(bookingId);
+    setShowConfirmModal(true);
+  };
 
+  const confirmCancelBooking = async () => {
+    if (!bookingToCancel) return;
+    
+    const bookingId = bookingToCancel;
+    
     try {
       setCancelLoading(bookingId);
       setCancelError(null);
       setCancelSuccess(null);
+      setShowConfirmModal(false);
 
-      // Mendapatkan token user dari localStorage
       const token = localStorage.getItem('token');
 
       if (!token) {
         throw new Error('User tidak terautentikasi');
       }
 
-      // Memanggil API untuk membatalkan pesanan
       const response = await axios.put(`${API_URL}/${bookingId}/cancel`, {}, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -191,7 +196,6 @@ export default function MyBookingsPage(): React.ReactElement {
       });
 
       if (response.data.success) {
-        // Update status booking di state
         setBookings(prevBookings => 
           prevBookings.map(booking => 
             booking.id === bookingId 
@@ -201,12 +205,10 @@ export default function MyBookingsPage(): React.ReactElement {
         );
         setCancelSuccess(bookingId);
         
-        // Tampilkan modal sukses
         setModalType('success');
         setModalMessage('Pemesanan berhasil dibatalkan');
         setShowModal(true);
         
-        // Refresh data
         fetchBookings();
       } else {
         throw new Error(response.data.message || 'Gagal membatalkan pemesanan');
@@ -224,12 +226,12 @@ export default function MyBookingsPage(): React.ReactElement {
       
       setCancelError(errorMessage);
       
-      // Tampilkan modal error
       setModalType('error');
       setModalMessage(errorMessage);
       setShowModal(true);
     } finally {
       setCancelLoading(null);
+      setBookingToCancel(null);
     }
   };
 
@@ -322,7 +324,6 @@ export default function MyBookingsPage(): React.ReactElement {
       <div className="max-w-6xl mx-auto px-4 py-16 md:py-28">
         <h1 className="text-2xl md:text-3xl font-bold mb-8">My Bookings</h1>
 
-        {/* Modal Pop-up */}
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
@@ -353,98 +354,127 @@ export default function MyBookingsPage(): React.ReactElement {
           </div>
         )}
 
-        {/* Bookings List */}
-        <div className="space-y-6">
-          {filteredBookings.length === 0 ? (
-            <div className="bg-white p-6 rounded-lg shadow-md text-center">
-              <div className="flex justify-center mb-4">
-                <FaTicketAlt className="text-gray-400 text-5xl" />
+        {showConfirmModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full text-center">
+              <div className="text-center mb-4">
+                <div className="h-16 w-16 bg-blue-100 rounded-full mx-auto flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
               </div>
-              <h2 className="text-xl font-semibold mb-2">No bookings found</h2>
-              <p className="text-gray-600 mb-6">
-                {searchTerm || filterStatus !== 'all'
-                  ? 'No bookings match your filters.'
-                  : 'You don\'t have any ticket bookings yet.'}
-              </p>
-              <Link to="/event" className="bg-primary text-white px-6 py-2 rounded-full inline-block">
-                Explore Events
-              </Link>
+              <h2 className="text-xl font-semibold mb-6 text-center text-gray-800">
+                Are you sure you want to<br/>cancel your ticket?
+              </h2>
+              
+              <div className="flex justify-center gap-4 mt-4">
+                <button
+                  onClick={() => setShowConfirmModal(false)}
+                  className="bg-gray-200 text-gray-800 px-8 py-2 rounded-md hover:bg-gray-300 w-24"
+                >
+                  No
+                </button>
+                <button
+                  onClick={confirmCancelBooking}
+                  className="bg-red-600 text-white px-8 py-2 rounded-md hover:bg-red-700 w-24"
+                >
+                  Yes
+                </button>
+              </div>
             </div>
-          ) : (
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-              {filteredBookings.map((booking) => (
-                <div key={booking.id} className="bg-primary rounded-lg shadow-md overflow-hidden">
-                  <div className="p-4 md:p-6">
-                    <div className="flex flex-col md:flex-row gap-4">
-                      {/* Event Image */}
-                      <div className="md:w-56 h-96 md:h-auto flex-shrink-0">
-                        <img
-                          src={`http://localhost:5000/uploads/images/${booking.eventImage}`}
-                          alt={booking.eventName}
-                          className="w-full h-full object-cover rounded-lg"
-                        />
+          </div>
+        )}
+
+        {filteredBookings.length === 0 ? (
+          <div className="bg-white p-6 rounded-lg shadow-md text-center">
+            <div className="flex justify-center mb-4">
+              <FaTicketAlt className="text-gray-400 text-5xl" />
+            </div>
+            <h2 className="text-xl font-semibold mb-2">No bookings found</h2>
+            <p className="text-gray-600 mb-6">
+              {searchTerm || filterStatus !== 'all'
+                ? 'No bookings match your filters.'
+                : 'You don\'t have any ticket bookings yet.'}
+            </p>
+            <Link to="/event" className="bg-primary text-white px-6 py-2 rounded-full inline-block">
+              Explore Events
+            </Link>
+          </div>
+        ) : (
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+            {filteredBookings.map((booking) => (
+              <div key={booking.id} className="bg-primary rounded-lg shadow-md overflow-hidden">
+                <div className="p-4 md:p-6">
+                  <div className="flex flex-col md:flex-row gap-4">
+                    {/* Event Image */}
+                    <div className="md:w-56 h-96 md:h-auto flex-shrink-0">
+                      <img
+                        src={`http://localhost:5000/uploads/images/${booking.eventImage}`}
+                        alt={booking.eventName}
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                    </div>
+
+                    {/* Main Information */}
+                    <div className="flex-grow">
+                      <div className="flex flex-col md:flex-row justify-between mb-4">
+                        <div>
+                          <h3 className="text-xl font-bold mb-2 text-secondary">{booking.eventName}</h3>
+                          <div className="mb-2">{getStatusLabel(booking.status)}</div>
+                        </div>
                       </div>
 
-                      {/* Main Information */}
-                      <div className="flex-grow">
-                        <div className="flex flex-col md:flex-row justify-between mb-4">
-                          <div>
-                            <h3 className="text-xl font-bold mb-2 text-secondary">{booking.eventName}</h3>
-                            <div className="mb-2">{getStatusLabel(booking.status)}</div>
-                          </div>
+                      <div className="mt-4 space-y-3">
+                        <div className="flex items-center gap-3 text-sm">
+                          <FaMapMarkerAlt className="text-secondary w-4 h-4" />
+                          <span className='text-secondary'>{booking.location}</span>
                         </div>
 
-                        <div className="mt-4 space-y-3">
-                          <div className="flex items-center gap-3 text-sm">
-                            <FaMapMarkerAlt className="text-secondary w-4 h-4" />
-                            <span className='text-secondary'>{booking.location}</span>
-                          </div>
-
-                          <div className="flex items-center gap-3 text-sm">
-                            <FaCalendarAlt className="text-secondary w-4 h-4" />
-                            <span className='text-secondary'>{booking.date}</span>
-                          </div>
-
-                          <div className="flex items-center gap-3 text-sm">
-                            <FaClock className="text-secondary w-4 h-4" />
-                            <span className='text-secondary'>{booking.time}</span>
-                          </div>
+                        <div className="flex items-center gap-3 text-sm">
+                          <FaCalendarAlt className="text-secondary w-4 h-4" />
+                          <span className='text-secondary'>{booking.date}</span>
                         </div>
 
-                        <div className="flex mt-3 justify-between items-start mb-2 py-3 border-t border-secondary">
-                          <div className='flex items-center gap-2'>
-                            <div className='w-10 h-10 bg-white rounded-sm flex items-center justify-center text-primary text-sm'>{booking.seats.length}</div>
-                            <div className='flex flex-col gap-1'>
-                              <div className='text-sm font-bold text-secondary'>{booking.ticketType}</div>
-                              <div className='text-xs text-secondary'>{booking.seats.join(', ')}</div>
-                            </div>
-                          </div>
+                        <div className="flex items-center gap-3 text-sm">
+                          <FaClock className="text-secondary w-4 h-4" />
+                          <span className='text-secondary'>{booking.time}</span>
                         </div>
-
-                        <div className="mt-4">
-                          {booking.status === 'active' && (
-                            <button 
-                              className="w-full text-white px-4 py-2 rounded-full bg-red-500 hover:bg-red-600"
-                              onClick={() => handleCancelBooking(booking.id)}
-                              disabled={cancelLoading === booking.id}
-                            >
-                              {cancelLoading === booking.id ? 'Processing...' : 'Cancel'}
-                            </button>
-                          )}
-                          <div className="mt-2 text-sm text-secondary">
-                            <p>* Tickets are non-refundable</p>
-                            <p>* Ticket cancellation can only be done 7 days before the event</p>
-                          </div>
-                        </div>
-
                       </div>
+
+                      <div className="flex mt-3 justify-between items-start mb-2 py-3 border-t border-secondary">
+                        <div className='flex items-center gap-2'>
+                          <div className='w-10 h-10 bg-white rounded-sm flex items-center justify-center text-primary text-sm'>{booking.seats.length}</div>
+                          <div className='flex flex-col gap-1'>
+                            <div className='text-sm font-bold text-secondary'>{booking.ticketType}</div>
+                            <div className='text-xs text-secondary'>{booking.seats.join(', ')}</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4">
+                        {booking.status === 'active' && (
+                          <button 
+                            className="w-full text-white px-4 py-2 rounded-full bg-red-500 hover:bg-red-600"
+                            onClick={() => handleCancelBooking(booking.id)}
+                            disabled={cancelLoading === booking.id}
+                          >
+                            {cancelLoading === booking.id ? 'Processing...' : 'Cancel'}
+                          </button>
+                        )}
+                        <div className="mt-2 text-sm text-secondary">
+                          <p>* Tickets are non-refundable</p>
+                          <p>* Ticket cancellation can only be done 7 days before the event</p>
+                        </div>
+                      </div>
+
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       <Footer />
     </main>

@@ -7,8 +7,12 @@ import { useAuth } from "../contexts/auth";
 const linksByRole = {
     user: [
         {
-            to: "/my-orders",
-            label: "My Orders",
+            to: "/my-bookings",
+            label: "My Bookings",
+        },
+        {
+            to: "/my-waiting-list",
+            label: "My Waiting List",
         },
     ],
     eventOrganizer: [

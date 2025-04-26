@@ -8,6 +8,8 @@ export default [
     // route("event/create/seat-arrangement", "routes/event/create/seat-arrangement.tsx"), // seat arrangement
     route("event/:id/book", "routes/event.$id.book.tsx"), // book event
     route("event/:id/payment", "routes/event.$id.payment.tsx"), // payment
+    route("event/:id/join-waitlist", "routes/event.$id.join-waitlist.tsx"), // join waitlist
     route("event/:id", "routes/event.tsx"), // event detail
     route("my-bookings", "routes/my-bookings.tsx"), // my booking
+    route("my-waiting-list", "routes/my-waiting-list.tsx"), // my waiting list
 ] satisfies RouteConfig;

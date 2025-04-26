@@ -94,6 +94,22 @@ export default function EventSummary({
       totalPrice: calculateTotalPrice()
     };
   };
+  
+  // Prepare data to send to waitlist page
+  const prepareWaitlistData = () => {
+    return {
+      eventData: {
+        id: eventId,
+        name: event.name,
+        image: `http://localhost:5000/uploads/images/${event.image}`,
+        date: typeof event.date === 'object' 
+          ? event.date.toLocaleDateString('en-US', {day: 'numeric', month: 'long', year: 'numeric'})
+          : event.date,
+        time: event.time,
+        location: event.location
+      }
+    };
+  };
 
   return (
     <div className="bg-primary text-white rounded-lg p-4 md:p-6 h-fit">
@@ -169,8 +185,9 @@ export default function EventSummary({
           </div>
 
           <Link
-            to={'#'}
-            className="bg-gray-200 p-2 rounded-full font-bold text-primary cursor-pointer text-center text-sm"
+            to={`/event/${eventId}/join-waitlist`}
+            state={prepareWaitlistData()}
+            className="bg-gray-200 p-2 rounded-full font-bold text-primary cursor-pointer text-center text-sm hover:bg-gray-300 transition-all"
           >
             Join Waitlist
           </Link>
