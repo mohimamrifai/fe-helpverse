@@ -24,7 +24,7 @@ interface AuthContextType {
     organizerName: string;
     password: string;
     agreeTerms: boolean;
-  }) => Promise<void>;
+  }) => Promise<User>;
   logout: () => void;
   isAuthenticated: boolean;
   refreshUserData: () => Promise<User>;
@@ -156,7 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: 'eventOrganizer'
       });
       console.log('Registration successful, user data:', userData);
-      setUser(userData);
+      return userData;
     } catch (err) {
       console.error('Registration error:', err);
       setError(err instanceof Error ? err.message : 'Registration failed');

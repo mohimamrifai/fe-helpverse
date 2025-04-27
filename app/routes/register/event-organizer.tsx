@@ -1,6 +1,44 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useRegisterEventOrganizer } from '../../hooks/useAuth';
+import { FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
+
+// Interface untuk modal
+interface ModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  message: string;
+  status: 'success' | 'error';
+}
+
+// Komponen Modal
+function Modal({ isOpen, onClose, title, message, status }: ModalProps) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center z-50">
+      <div className="fixed inset-0 bg-black bg-opacity-50" onClick={onClose}></div>
+      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 relative z-10">
+        <div className="text-center">
+          {status === 'success' ? (
+            <FaCheckCircle className="mx-auto text-green-500 text-5xl mb-4" />
+          ) : (
+            <FaTimesCircle className="mx-auto text-red-500 text-5xl mb-4" />
+          )}
+          <h2 className="text-xl font-bold mb-2">{title}</h2>
+          <p className="mb-6 text-gray-600">{message}</p>
+          <button
+            onClick={onClose}
+            className="bg-primary text-white py-2 px-6 rounded-md hover:bg-primary/90"
+          >
+            OK
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function meta() {
   return [
@@ -11,17 +49,25 @@ export function meta() {
 
 export default function RegisterEventOrganizer() {
   const navigate = useNavigate();
-  const { register, loading, error } = useRegisterEventOrganizer();
+  const { register, loading, error, newEventOrganizer } = useRegisterEventOrganizer();
   const [formData, setFormData] = useState({
     username: '',
     fullName: '',
     email: '',
     phone: '',
-    organizationName: '',
+    organizerName: '',
     password: '',
     agreeTerms: false
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  
+  // State untuk modal
+  const [showModal, setShowModal] = useState(false);
+  const [modalData, setModalData] = useState({
+    title: '',
+    message: '',
+    status: 'success' as 'success' | 'error'
+  });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -61,8 +107,8 @@ export default function RegisterEventOrganizer() {
       errors.phone = 'Nomor telepon harus diisi';
     }
     
-    if (!formData.organizationName.trim()) {
-      errors.organizationName = 'Nama organisasi harus diisi';
+    if (!formData.organizerName.trim()) {
+      errors.organizerName = 'Nama organisasi harus diisi';
     }
     
     if (!formData.password.trim()) {
@@ -89,27 +135,53 @@ export default function RegisterEventOrganizer() {
     
     try {
       console.log('Form data being submitted:', formData);
-      await register({
+      const dataToSubmit = {
         ...formData,
-        role: 'eventOrganizer'
+        role: 'eventOrganizer' as const
+      };
+      console.log('Data yang akan dikirim ke API:', dataToSubmit);
+      
+      await register(dataToSubmit);
+      
+      // Tampilkan modal sukses
+      setModalData({
+        title: 'Pendaftaran Berhasil',
+        message: 'Akun event organizer Anda telah berhasil dibuat. Anda akan diarahkan ke halaman utama.',
+        status: 'success'
       });
-      alert('Event organizer successfully registered!');
-      navigate('/');
+      setShowModal(true);
     } catch (err) {
       console.error('Registration error:', err);
-      // Error will be handled by the hook and displayed below
+      
+      // Tampilkan modal error
+      setModalData({
+        title: 'Pendaftaran Gagal',
+        message: error || 'Terjadi kesalahan saat mendaftarkan akun Anda. Silakan coba lagi.',
+        status: 'error'
+      });
+      setShowModal(true);
+    }
+  };
+  
+  // Handler untuk menutup modal
+  const handleCloseModal = () => {
+    setShowModal(false);
+    
+    // Jika pendaftaran berhasil, arahkan ke halaman utama
+    if (modalData.status === 'success') {
+      navigate('/');
     }
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gray-50">
+    <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-secondary">
       <div className="w-full max-w-md p-6 space-y-4 bg-white rounded-lg shadow-md">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-primary">Register Event Organizer</h1>
           <p className="mt-1 text-sm text-gray-600">Create your event organizer account</p>
         </div>
         
-        {error && (
+        {error && !showModal && (
           <div className="p-3 rounded-md bg-red-50 text-red-700 text-sm">
             {error}
           </div>
@@ -182,18 +254,18 @@ export default function RegisterEventOrganizer() {
             </div>
             
             <div>
-              <label htmlFor="organizationName" className="block text-sm font-medium text-gray-700">Organization Name</label>
+              <label htmlFor="organizerName" className="block text-sm font-medium text-gray-700">Organization Name</label>
               <input
-                id="organizationName"
-                name="organizationName"
+                id="organizerName"
+                name="organizerName"
                 type="text"
                 required
-                className={`mt-1 block w-full px-3 py-2 border ${formErrors.organizationName ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary`}
-                value={formData.organizationName}
+                className={`mt-1 block w-full px-3 py-2 border ${formErrors.organizerName ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary`}
+                value={formData.organizerName}
                 onChange={handleChange}
               />
-              {formErrors.organizationName && (
-                <p className="mt-1 text-sm text-red-600">{formErrors.organizationName}</p>
+              {formErrors.organizerName && (
+                <p className="mt-1 text-sm text-red-600">{formErrors.organizerName}</p>
               )}
             </div>
             
@@ -257,6 +329,15 @@ export default function RegisterEventOrganizer() {
             Kembali
           </Link>
         </div>
+
+        {/* Modal */}
+        <Modal
+          isOpen={showModal}
+          onClose={handleCloseModal}
+          title={modalData.title}
+          message={modalData.message}
+          status={modalData.status}
+        />
       </div>
     </div>
   );

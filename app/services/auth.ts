@@ -174,15 +174,15 @@ export const authService = {
       
       console.log('API response:', response.data);
       
-      if (response.data.success && response.data.token) {
-        localStorage.setItem('token', response.data.token);
-        
-        // Jika response tidak mengandung data user, ambil data user menggunakan token
-        if (!response.data.data) {
-          return this.getCurrentUser();
+      if (response.data.success) {
+        // Tidak menyimpan token baru ke localStorage untuk mencegah admin berubah menjadi event organizer
+        // Hanya mengembalikan data user event organizer yang baru dibuat
+        if (response.data.data) {
+          return normalizeUser(response.data.data);
+        } else {
+          // Jika server tidak mengembalikan data user, lempar error
+          throw new Error('Server tidak mengembalikan data user');
         }
-        
-        return normalizeUser(response.data.data);
       }
       
       throw new Error(response.data.message || 'Registration failed');

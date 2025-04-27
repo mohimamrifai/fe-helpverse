@@ -97,14 +97,6 @@ export interface PromotionalOffer {
   active: boolean;
 }
 
-// Definisi tipe untuk respons daftar event
-interface EventListResponse {
-  success: boolean;
-  count: number;
-  pagination: any;
-  data: Event[];
-}
-
 // Definisi tipe untuk parameter booking
 export interface BookingParams {
   ticketTypeId: string;

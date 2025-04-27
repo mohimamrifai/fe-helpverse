@@ -71,7 +71,8 @@ const uploadImage = async (file) => {
     }
     
     const result = await response.json();
-    return result.data.filePath; // Mengembalikan path file untuk disimpan di database
+    // Gunakan fileUrl dari server jika tersedia, fallback ke filePath
+    return result.data.fileUrl || result.data.filePath; 
   } catch (error) {
     console.error('Error uploading image:', error);
     throw error;

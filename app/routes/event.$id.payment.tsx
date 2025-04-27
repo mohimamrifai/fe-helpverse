@@ -498,7 +498,7 @@ export default function EventPaymentPage(): React.ReactElement {
                 <div className="mb-6">
                     <button 
                         onClick={handleBackToSeats}
-                        className="text-primary font-medium flex items-center"
+                        className="text-primary text-lg font-medium flex items-center"
                     >
                         ← Back to seat selection
                     </button>

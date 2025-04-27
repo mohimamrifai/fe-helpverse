@@ -30,23 +30,24 @@ export const useLogin = () => {
 export const useRegisterEventOrganizer = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [newEventOrganizer, setNewEventOrganizer] = useState<User | null>(null);
 
   const register = async (data: {
     username: string;
     fullName: string;
     email: string;
     phone: string;
-    organizationName: string;
+    organizerName: string;
     password: string;
     agreeTerms: boolean;
-    role: string;
+    role: 'eventOrganizer';
   }) => {
     try {
       setLoading(true);
       setError(null);
       const userData = await authService.registerEventOrganizer(data);
-      setUser(userData);
+      // Simpan data event organizer baru tanpa mengganti state user saat ini
+      setNewEventOrganizer(userData);
       return userData;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
@@ -56,7 +57,7 @@ export const useRegisterEventOrganizer = () => {
     }
   };
 
-  return { register, loading, error, user };
+  return { register, loading, error, newEventOrganizer };
 };
 
 // Custom hook untuk mendapatkan user saat ini
