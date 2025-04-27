@@ -73,14 +73,11 @@ export default function SeatMap({ tickets, generatedSeats, selectedSeats, onSeat
   const seatsByTicketType = useMemo(() => {
     const result: Record<string, Record<string, GeneratedSeat[]>> = {};
 
-    // Show only available or selected seats
-    const availableSeats = generatedSeats.filter(
-      seat => seat.status === 'available' || 
-      selectedSeats.includes(`${seat.ticketTypeId}:${seat.id}`)
-    );
+    // Include all seats, including booked ones - remove this filter
+    const visibleSeats = generatedSeats;
 
     // Group seats by ticketTypeId and row
-    availableSeats.forEach(seat => {
+    visibleSeats.forEach(seat => {
       if (!result[seat.ticketTypeId]) {
         result[seat.ticketTypeId] = {};
       }
@@ -104,20 +101,10 @@ export default function SeatMap({ tickets, generatedSeats, selectedSeats, onSeat
     return result;
   }, [generatedSeats, selectedSeats]);
 
-  if (!tickets || tickets.length === 0 || generatedSeats.length === 0) {
-    return (
-      <div className="text-center p-4 bg-yellow-100 rounded-lg">
-        <p>No seats available for this event.</p>
-      </div>
-    );
-  }
+  // Check if there are any seats
+  const hasSeats = generatedSeats.length > 0;
 
-  // Check if there are any available seats
-  const hasAvailableSeats = generatedSeats.some(seat => 
-    seat.status === 'available' || selectedSeats.includes(`${seat.ticketTypeId}:${seat.id}`)
-  );
-
-  if (!hasAvailableSeats) {
+  if (!hasSeats) {
     return (
       <div className="text-center p-4 bg-yellow-100 rounded-lg">
         <p>No seats available for this event.</p>
@@ -188,7 +175,27 @@ export default function SeatMap({ tickets, generatedSeats, selectedSeats, onSeat
                     {rowLabel}
                   </div>
                   <div className="flex flex-wrap justify-center">
-                    {rowSeats.map(seat => renderSeat(seat))}
+                    {/* Create a grid with all seats from column 1 to max column */}
+                    {Array.from({ length: ticket.seatArrangement?.columns || 10 }).map((_, index) => {
+                      const columnNumber = index + 1;
+                      const seatForThisPosition = rowSeats.find(seat => parseInt(seat.column) === columnNumber);
+                      
+                      // If seat exists, render it
+                      if (seatForThisPosition) {
+                        return renderSeat(seatForThisPosition);
+                      }
+                      
+                      // If no seat is found for this position, render placeholder or sold seat
+                      return (
+                        <div
+                          key={`placeholder-${rowLabel}-${columnNumber}`}
+                          className="w-6 h-6 rounded-sm text-[10px] flex items-center justify-center mx-0.5 bg-red-700 text-white cursor-not-allowed"
+                          title={`Seat ${rowLabel}${columnNumber} - Sold/Unavailable`}
+                        >
+                          {columnNumber}
+                        </div>
+                      );
+                    })}
                   </div>
                   <div className="w-6 h-6 flex items-center justify-center text-[10px] font-bold">
                     {rowLabel}

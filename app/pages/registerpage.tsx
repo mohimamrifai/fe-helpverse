@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { useRegisterEventOrganizer } from '../../hooks/useAuth';
-import { FaCheckCircle, FaTimesCircle, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { useRegisterUser } from '../hooks/useAuth';
+import { FaEye, FaEyeSlash, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 
 // Interface untuk modal
 interface ModalProps {
@@ -40,23 +40,15 @@ function Modal({ isOpen, onClose, title, message, status }: ModalProps) {
   );
 }
 
-export function meta() {
-  return [
-    { title: "Register Event Organizer - Helpverse" },
-    { name: "description", content: "Create a new event organizer account" },
-  ];
-}
-
-export default function RegisterEventOrganizer() {
+export default function RegisterPage() {
   const navigate = useNavigate();
-  const { register, loading, error, newEventOrganizer } = useRegisterEventOrganizer();
+  const { register, loading, error, newUser } = useRegisterUser();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
     fullName: '',
     email: '',
     phone: '',
-    organizerName: '',
     password: '',
     agreeTerms: false
   });
@@ -112,10 +104,6 @@ export default function RegisterEventOrganizer() {
       errors.phone = 'Nomor telepon harus diisi';
     }
     
-    if (!formData.organizerName.trim()) {
-      errors.organizerName = 'Nama organisasi harus diisi';
-    }
-    
     if (!formData.password.trim()) {
       errors.password = 'Password harus diisi';
     } else if (formData.password.length < 6) {
@@ -134,24 +122,21 @@ export default function RegisterEventOrganizer() {
     e.preventDefault();
     
     if (!validateForm()) {
-      console.log('Form validation failed:', formErrors);
       return;
     }
     
     try {
-      console.log('Form data being submitted:', formData);
       const dataToSubmit = {
         ...formData,
-        role: 'eventOrganizer' as const
+        role: 'user' as const
       };
-      console.log('Data yang akan dikirim ke API:', dataToSubmit);
       
       await register(dataToSubmit);
       
       // Tampilkan modal sukses
       setModalData({
         title: 'Pendaftaran Berhasil',
-        message: 'Akun event organizer Anda telah berhasil dibuat. Anda akan diarahkan ke halaman utama.',
+        message: 'Akun Anda telah berhasil dibuat. Anda akan diarahkan ke halaman login.',
         status: 'success'
       });
       setShowModal(true);
@@ -172,7 +157,7 @@ export default function RegisterEventOrganizer() {
   const handleCloseModal = () => {
     setShowModal(false);
     
-    // Jika pendaftaran berhasil, arahkan ke halaman utama
+    // Jika pendaftaran berhasil, arahkan ke halaman login
     if (modalData.status === 'success') {
       navigate('/');
     }
@@ -183,15 +168,9 @@ export default function RegisterEventOrganizer() {
       <div className="w-full max-w-md p-6 space-y-4 bg-white rounded-lg shadow-md">
         <div className="text-center">
           <img src="/logo-blue.png" alt="HELPVerse Logo" className="mx-auto h-16 w-16" />
-          <h1 className="text-2xl font-bold text-primary mt-2">Daftar Event Organizer</h1>
-          <p className="mt-1 text-sm text-gray-600">Buat akun untuk mengelola event Anda</p>
+          <h1 className="text-2xl font-bold text-primary mt-2">Daftar Akun</h1>
+          <p className="mt-1 text-sm text-gray-600">Buat akun untuk memesan tiket event</p>
         </div>
-        
-        {error && !showModal && (
-          <div className="p-3 rounded-md bg-red-50 text-red-700 text-sm">
-            {error}
-          </div>
-        )}
         
         <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-3">
@@ -260,23 +239,6 @@ export default function RegisterEventOrganizer() {
               />
               {formErrors.phone && (
                 <p className="mt-1 text-sm text-red-600">{formErrors.phone}</p>
-              )}
-            </div>
-            
-            <div>
-              <label htmlFor="organizerName" className="block text-sm font-medium text-gray-700">Nama Organisasi</label>
-              <input
-                id="organizerName"
-                name="organizerName"
-                type="text"
-                required
-                className={`mt-1 block w-full px-3 py-2 border ${formErrors.organizerName ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary`}
-                placeholder="Masukkan nama organisasi Anda"
-                value={formData.organizerName}
-                onChange={handleChange}
-              />
-              {formErrors.organizerName && (
-                <p className="mt-1 text-sm text-red-600">{formErrors.organizerName}</p>
               )}
             </div>
             
@@ -353,8 +315,8 @@ export default function RegisterEventOrganizer() {
           
           <div className="text-sm text-center mt-4 border-t pt-4">
             <p className="text-gray-600">
-              Ingin mendaftar sebagai pengguna biasa?{' '}
-              <Link to="/register" className="font-semibold text-primary hover:text-primary/80">
+              Ingin mendaftar sebagai event organizer?{' '}
+              <Link to="/register/event-organizer" className="font-semibold text-primary hover:text-primary/80">
                 Daftar di sini
               </Link>
             </p>
@@ -372,4 +334,4 @@ export default function RegisterEventOrganizer() {
       />
     </div>
   );
-}
+} 

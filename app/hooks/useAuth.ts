@@ -26,6 +26,38 @@ export const useLogin = () => {
   return { login, loading, error, user };
 };
 
+// Custom hook untuk register user biasa
+export const useRegisterUser = () => {
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [newUser, setNewUser] = useState<User | null>(null);
+
+  const register = async (data: {
+    username: string;
+    fullName: string;
+    email: string;
+    phone: string;
+    password: string;
+    agreeTerms: boolean;
+    role: 'user';
+  }) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const userData = await authService.registerUser(data);
+      setNewUser(userData);
+      return userData;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Registration failed');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { register, loading, error, newUser };
+};
+
 // Custom hook untuk register event organizer
 export const useRegisterEventOrganizer = () => {
   const [loading, setLoading] = useState<boolean>(false);

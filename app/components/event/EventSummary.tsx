@@ -77,6 +77,10 @@ export default function EventSummary({
 
   // Prepare data to send to payment page
   const preparePaymentData = () => {
+    // Get the clean seat IDs without the ticketType prefix
+    const cleanSeatIds = getActualSeatIds();
+    console.log("Selected seats for payment:", cleanSeatIds);
+    
     return {
       eventData: {
         id: eventId,
@@ -89,7 +93,7 @@ export default function EventSummary({
         location: event.location
       },
       selectedSeats: selectedSeats,
-      selectedSeatsLabels: getActualSeatIds(),
+      selectedSeatsLabels: cleanSeatIds,
       ticketType: getSelectedTicketNames(),
       totalPrice: calculateTotalPrice()
     };

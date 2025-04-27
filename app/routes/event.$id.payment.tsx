@@ -36,61 +36,6 @@ interface PromotionalOffer {
   _id: string;
 }
 
-interface EventDetailsResponse {
-  success: boolean;
-  data: {
-    _id: string;
-    name: string;
-    description: string;
-    date: string;
-    time: string;
-    location: string;
-    image: string;
-    promotionalOffers: PromotionalOffer[];
-    // other fields not needed for this feature
-  };
-}
-
-// Event API client
-const EventService = {
-  async getEventDetails(eventId: string): Promise<EventDetailsResponse> {
-    // In a real app, this would be an API call
-    // Simulating API response with a delay
-    return new Promise(resolve => {
-      setTimeout(() => {
-        resolve({
-          success: true,
-          data: {
-            _id: eventId,
-            name: "Tech Conference 2025",
-            description: "The premier tech event in Asia featuring talks from industry giants, workshops on emerging technologies, and networking opportunities. Topics include AI, blockchain, cloud computing, and digital transformation strategies.",
-            date: "2025-05-01T00:00:00.000Z",
-            time: "09:00",
-            location: "Kuala Lumpur Convention Centre, 50088 Kuala Lumpur",
-            image: "event-1.png",
-            promotionalOffers: [
-              {
-                name: "Early Bird",
-                description: "Early Bird discount for Tech Conference 2025",
-                code: "EARLYBIRD",
-                discountType: "percentage",
-                discountValue: 25,
-                maxUses: 100,
-                currentUses: 0,
-                validFrom: "2025-04-01T00:00:00.000Z",
-                validUntil: "2025-06-15T00:00:00.000Z",
-                active: true,
-                _id: "680b62206024d2c93edc222f"
-              }
-            ],
-            // other fields would be here
-          }
-        });
-      }, 500); // Simulate network delay
-    });
-  }
-};
-
 // Promo code service that uses the event promotionalOffers
 const PromoCodeService = {
   async validatePromoCode(code: string, eventId: string): Promise<{ valid: boolean, discount?: number, message?: string }> {
@@ -98,18 +43,13 @@ const PromoCodeService = {
       console.log(`Validating promo code: ${code} for event: ${eventId}`);
       
       // Get event details to access promotional offers
-      const eventDetails = await EventService.getEventDetails(eventId);
-      
-      if (!eventDetails.success) {
-        console.log('Error fetching event details');
-        return { valid: false, message: 'Error fetching event details' };
-      }
+      const eventDetails = await eventService.getEventById(eventId);
       
       console.log('Event details fetched successfully');
-      console.log('Available promo codes:', eventDetails.data.promotionalOffers.map(offer => offer.code));
+      console.log('Available promo codes:', eventDetails.promotionalOffers?.map(offer => offer.code));
       
       // Find the promo code in the event's promotional offers
-      const promoOffer = eventDetails.data.promotionalOffers.find(
+      const promoOffer = eventDetails.promotionalOffers?.find(
         offer => offer.code === code && offer.active
       );
       
@@ -120,15 +60,15 @@ const PromoCodeService = {
         return { valid: false, message: 'Invalid promo code' };
       }
       
-      // Skip date validation for demo purposes - all active promo codes are valid
-      // In a real application, you would check dates as follows:
-      // const now = new Date();
-      // const validFrom = new Date(promoOffer.validFrom);
-      // const validUntil = new Date(promoOffer.validUntil);
-      // 
-      // if (now < validFrom || now > validUntil) {
-      //   return { valid: false, message: 'Promo code has expired or not yet active' };
-      // }
+      // Validate promo code date range
+      const now = new Date();
+      const validFrom = new Date(promoOffer.validFrom);
+      const validUntil = new Date(promoOffer.validUntil);
+      
+      if (now < validFrom || now > validUntil) {
+        console.log('Promo code has expired or not yet active');
+        return { valid: false, message: 'Promo code has expired or not yet active' };
+      }
       
       // Check if max uses reached
       if (promoOffer.currentUses >= promoOffer.maxUses) {
@@ -309,12 +249,37 @@ export default function EventPaymentPage(): React.ReactElement {
                 
                 // Pastikan row dan column adalah angka yang valid
                 let row = 0, col = 0;
-                if (data.seatId && data.seatId.includes('-')) {
-                    const parts = data.seatId.split('-');
-                    row = parseInt(parts[0]) || 1;
-                    col = parseInt(parts[1]) || 1;
+                
+                // Handle format seat seperti 'A1', 'B2', dll.
+                if (data.seatId) {
+                    // Format dari SeatMap dengan format "A1", "B5", dll
+                    // dengan asumsi:
+                    // - Huruf pertama adalah row: A=1, B=2, C=3, dst
+                    // - Angka sisanya adalah column
+                    
+                    // Mengekstrak huruf pertama untuk baris
+                    if (data.seatId.match(/^[A-Za-z]/)) {
+                        const rowChar = data.seatId.charAt(0).toUpperCase();
+                        // Konversi huruf ke angka (A=1, B=2, dst)
+                        row = rowChar.charCodeAt(0) - 64; // ASCII 'A' adalah 65, jadi A akan menjadi 1
+                        
+                        // Mengekstrak angka setelah huruf untuk kolom
+                        const colStr = data.seatId.substring(1);
+                        col = parseInt(colStr) || 1;
+                        
+                        console.log(`Converted seat ${data.seatId} to row=${row}, column=${col}`);
+                    } else if (data.seatId.includes('-')) {
+                        // Format alternatif seperti '1-2'
+                        const parts = data.seatId.split('-');
+                        row = parseInt(parts[0]) || 1;
+                        col = parseInt(parts[1]) || 1;
+                    } else {
+                        // Fallback jika format tidak dapat dikenali
+                        row = 1;
+                        col = 1;
+                    }
                 } else {
-                    // Fallback jika format tidak sesuai
+                    // Fallback jika seatId tidak ada
                     row = 1;
                     col = 1;
                 }

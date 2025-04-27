@@ -89,7 +89,19 @@ export default function MyBookingsPage(): React.ReactElement {
             day: 'numeric'
           }) : 'Tanggal tidak tersedia',
           time: order.event?.time || 'Waktu tidak tersedia',
-          seats: order.tickets?.[0]?.seats?.map((seat: any) => `${String.fromCharCode(65 + parseInt(seat.row) - 1)}${seat.column}`) || [],
+          seats: order.tickets?.[0]?.seats?.map((seat: any) => {
+            // Handle different seat format possibilities
+            if (typeof seat === 'string') {
+              return seat;
+            } else if (seat && typeof seat === 'object') {
+              if (seat.row && seat.column) {
+                return `${String.fromCharCode(65 + parseInt(seat.row) - 1)}${seat.column}`;
+              } else if (seat.row && seat.col) {
+                return `${String.fromCharCode(65 + parseInt(seat.row) - 1)}${seat.col}`;
+              }
+            }
+            return 'Unknown';
+          }) || [],
           ticketType: order.tickets?.[0]?.ticketType || 'Tiket Standar',
           totalPrice: order.totalAmount || 0,
           subtotal: order.subtotal || order.totalAmount || 0,
@@ -133,13 +145,17 @@ export default function MyBookingsPage(): React.ReactElement {
           id: `BK-${Date.now().toString().slice(-6)}`,
           eventId: parsedData.eventId,
           eventName: parsedData.eventName || 'Music Festival 2025',
-          eventImage: parsedData.eventImage || '/event-1.png',
+          eventImage: parsedData.eventImage || '/logo-blue.png',
           location: parsedData.eventLocation || 'HELP Auditorium',
           date: parsedData.eventDate || 'August 10, 2025',
           time: parsedData.eventTime || '10AM',
           seats: parsedData.seats?.map((seat: string) => {
-            const [row, col] = seat.split('-');
-            return `${String.fromCharCode(65 + parseInt(row) - 1)}${col}`;
+            if (seat.includes('-')) {
+              const [row, col] = seat.split('-');
+              return `${String.fromCharCode(65 + parseInt(row) - 1)}${col}`;
+            } else {
+              return seat; // Jika format sudah sesuai, gunakan langsung
+            }
           }) || [],
           ticketType: parsedData.ticketType || 'VIP Ticket',
           totalPrice: parsedData.totalPrice || 0,
@@ -397,7 +413,7 @@ export default function MyBookingsPage(): React.ReactElement {
                 ? 'No bookings match your filters.'
                 : 'You don\'t have any ticket bookings yet.'}
             </p>
-            <Link to="/event" className="bg-primary text-white px-6 py-2 rounded-full inline-block">
+            <Link to="/" className="bg-primary text-white px-6 py-2 rounded-full inline-block">
               Explore Events
             </Link>
           </div>
@@ -447,7 +463,7 @@ export default function MyBookingsPage(): React.ReactElement {
                           <div className='w-10 h-10 bg-white rounded-sm flex items-center justify-center text-primary text-sm'>{booking.seats.length}</div>
                           <div className='flex flex-col gap-1'>
                             <div className='text-sm font-bold text-secondary'>{booking.ticketType}</div>
-                            <div className='text-xs text-secondary'>{booking.seats.join(', ')}</div>
+                            <div className='text-xs text-secondary'>{booking.seats.length > 0 ? booking.seats.map(seat => seat).join(', ') : 'No seat information'}</div>
                           </div>
                         </div>
                       </div>

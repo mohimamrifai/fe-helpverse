@@ -5,6 +5,7 @@ export default [
     route("login", "routes/login.tsx"), // login
     route("forgot-password", "routes/forgot-password.tsx"), // forgot password
     route("change-password", "routes/change-password.tsx"), // change password
+    route("register", "routes/register.tsx"), // register user
     route("register/event-organizer", "routes/register/event-organizer.tsx"), // register event organizer
     route("event/create", "routes/event/create.tsx"), // create event
     // route("event/create/seat-arrangement", "routes/event/create/seat-arrangement.tsx"), // seat arrangement
@@ -14,4 +15,5 @@ export default [
     route("event/:id", "routes/event.tsx"), // event detail
     route("my-bookings", "routes/my-bookings.tsx"), // my booking
     route("my-waiting-list", "routes/my-waiting-list.tsx"), // my waiting list
+    route("my-events", "routes/my-events.tsx"), // my events
 ] satisfies RouteConfig;

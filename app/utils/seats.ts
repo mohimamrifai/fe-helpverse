@@ -21,20 +21,42 @@ export function generateSeatsFromTickets(event: Event): GeneratedSeat[] {
     const rowLabels = Array.from({ length: rows }, (_, i) => 
       String.fromCharCode(65 + i)
     );
+    
+    // Map for numeric row to letter row (1 => 'A', 2 => 'B', etc.)
+    const numericToLetterMap = new Map();
+    for (let i = 1; i <= rows; i++) {
+      numericToLetterMap.set(i, String.fromCharCode(64 + i)); // ASCII 'A' is 65
+    }
 
     // For each row and column, create a seat
-    rowLabels.forEach(row => {
+    rowLabels.forEach((row, rowIndex) => {
       for (let col = 1; col <= columns; col++) {
         const seatId = `${row}${col}`;
-        
+        const numericRow = rowIndex + 1; // 1-based row number
+
+        // Log untuk debugging
+        console.log(`Creating seat: ${seatId}, numeric row: ${numericRow}, numeric column: ${col}`);
+
         // Check if seat is already booked
-        const isBooked = ticket.bookedSeats?.some(
-          bookedSeat => 
-            (typeof bookedSeat === 'string' && bookedSeat === seatId) ||
-            (typeof bookedSeat === 'object' && 
-              bookedSeat.row.toString() === row.toString() && 
-              bookedSeat.column.toString() === String(col))
-        ) || false;
+        const isBooked = ticket.bookedSeats?.some(bookedSeat => {
+          // Check for different formats of booked seats
+          if (typeof bookedSeat === 'string') {
+            return bookedSeat === seatId;
+          } else if (typeof bookedSeat === 'object') {
+            // Match both ways: numeric row to letter AND letter to numeric
+            const bookedRow = bookedSeat.row;
+            const bookedCol = bookedSeat.column;
+            
+            // Check if numeric row matches with the current row letter
+            if (typeof bookedRow === 'number') {
+              return bookedRow === numericRow && bookedCol.toString() === col.toString();
+            }
+            
+            // Or if row is already a letter like 'A', 'B', etc.
+            return String(bookedRow) === row && String(bookedCol) === String(col);
+          }
+          return false;
+        }) || false;
 
         allSeats.push({
           id: seatId,
