@@ -10,7 +10,7 @@ export interface Event {
   time: string;
   location: string;       // Diubah dari venue menjadi location
   address: string;
-  image: string;
+  image: string | File;   // Mendukung string (path) dan File object
   totalSeats: number;
   availableSeats: number;
   tickets: Ticket[];      // Diubah dari ticketTypes menjadi tickets
@@ -87,6 +87,8 @@ export interface Organizer {
 // Definisi tipe untuk promotional offer
 export interface PromotionalOffer {
   _id: string;
+  name: string;
+  description?: string;
   code: string;
   discountType: 'percentage' | 'fixed';
   discountValue: number;
@@ -225,6 +227,8 @@ const normalizeEvent = (eventData: any): Event => {
     promotionalOffers: Array.isArray(eventData.promotionalOffers) 
       ? eventData.promotionalOffers.map((offer: any) => ({
           _id: offer._id || '',
+          name: offer.name || '',
+          description: offer.description || '',
           code: offer.code,
           discountType: offer.discountType as 'percentage' | 'fixed',
           discountValue: offer.discountValue,
@@ -546,7 +550,65 @@ export const eventService = {
   // Fungsi untuk membuat event baru (hanya event organizer)
   async createEvent(eventData: Omit<Event, 'id' | '_id'>): Promise<Event> {
     try {
-      const response = await api.post('/api/events', eventData);
+      // Buat FormData
+      const formData = new FormData();
+      
+      // Cast image ke any dulu untuk menggunakan instanceof
+      const imageFile = eventData.image as any;
+      
+      // Tambahkan file gambar
+      if (imageFile instanceof File) {
+        formData.append('image', imageFile);
+      }
+      
+      // Simpan properties dari eventData untuk ditambahkan ke formData
+      const dataToSend = { ...eventData };
+      
+      // Hapus image dari data untuk menghindari duplikasi
+      if (imageFile instanceof File) {
+        delete (dataToSend as any).image;
+      }
+      
+      // Tambahkan semua field event ke formData
+      Object.keys(dataToSend).forEach(key => {
+        const value = dataToSend[key as keyof typeof dataToSend];
+        
+        // Untuk array atau object, konversi ke JSON string sesuai dokumentasi API
+        if (typeof value === 'object' && value !== null) {
+          if (key === 'tickets' || key === 'promotionalOffers' || key === 'tags') {
+            formData.append(key, JSON.stringify(value));
+          } else if (Array.isArray(value)) {
+            formData.append(key, JSON.stringify(value));
+          } else {
+            formData.append(key, JSON.stringify(value));
+          }
+        } else if (value !== undefined && value !== null) {
+          formData.append(key, String(value));
+        }
+      });
+      
+      // Log data yang akan dikirim untuk debugging
+      console.log('FormData fields being sent:');
+      for (const pair of (formData as any).entries()) {
+        // Jika ini adalah ticket atau promotionalOffers yang sudah di-stringify
+        if (pair[0] === 'tickets' || pair[0] === 'promotionalOffers') {
+          try {
+            console.log(pair[0], 'parsed value:', JSON.parse(pair[1]));
+          } catch (e) {
+            console.log(pair[0], pair[1]);
+          }
+        } else {
+          console.log(pair[0], pair[1]);
+        }
+      }
+      
+      // Kirim request dengan content-type yang benar (tidak perlu set di headers karena FormData akan otomatis)
+      const response = await api.post('/api/events', formData, {
+        headers: {
+          // Hapus content-type agar browser bisa set boundary yang benar untuk multipart/form-data
+          'Content-Type': undefined
+        }
+      });
       
       if (response.data.success) {
         return normalizeEvent(response.data.data);
@@ -554,8 +616,9 @@ export const eventService = {
       
       throw new Error(response.data.message || 'Failed to create event');
     } catch (error) {
+      console.error('Error detail:', error);
       if (axios.isAxiosError(error) && error.response) {
-        throw new Error(error.response.data.message || 'Failed to create event');
+        throw new Error(error.response.data.message || error.response.data.error || 'Failed to create event');
       }
       throw error;
     }

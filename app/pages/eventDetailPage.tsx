@@ -63,7 +63,7 @@ export default function EventDetailPage() {
         <div className="py-28 md:py-28 px-4 md:px-8 lg:px-16 bg-secondary">
             <div className="flex flex-col md:flex-row gap-4 mb-6 justify-center items-start">
                 <div className="flex justify-center">
-                    <img src={`http://localhost:5000/uploads/images/${event.image}`} alt={event.name} className="w-[250px] h-[400px] object-cover rounded-lg shadow-md" />
+                    <img src={`http://localhost:5000${event.image}`} alt={event.name} className="w-[250px] h-[400px] object-cover rounded-lg shadow-md" />
                 </div>
                 <div className="bg-primary rounded-lg shadow-md p-4 text-secondary flex flex-col gap-3 md:w-1/3 max-w-md">
                     <h1 className="text-xl md:text-2xl font-bold">{event.name}</h1>

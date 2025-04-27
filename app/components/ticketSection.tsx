@@ -127,7 +127,7 @@ export function TicketSection() {
                             className="md:w-[250px] md:h-[450px] h-[450px] w-[250px] rounded-md overflow-hidden flex-shrink-0 mx-2 transition-all duration-300 relative group"
                         >
                             <img 
-                                src={`http://localhost:5000/uploads/images/${event.image}`} 
+                                src={`http://localhost:5000${event.image}`} 
                                 alt={event.name || "Event image"} 
                                 className="w-full h-full object-cover" 
                             />

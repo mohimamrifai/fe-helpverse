@@ -329,7 +329,7 @@ export default function JoinWaitlistPage() {
                                 {event.image && (
                                     <div className="max-w-md">
                                         <img
-                                            src={`http://localhost:5000/uploads/images/${event.image}`}
+                                            src={`http://localhost:5000${event.image}`}
                                             alt={event.name}
                                             className="w-full h-auto object-contain rounded-md shadow-md"
                                         />

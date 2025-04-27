@@ -81,7 +81,7 @@ export default function EventSummary({
       eventData: {
         id: eventId,
         name: event.name,
-        image: `http://localhost:5000/uploads/images/${event.image}`,
+        image: `http://localhost:5000${event.image}`,
         date: typeof event.date === 'object' 
           ? event.date.toLocaleDateString('en-US', {day: 'numeric', month: 'long', year: 'numeric'})
           : event.date,
@@ -101,7 +101,7 @@ export default function EventSummary({
       eventData: {
         id: eventId,
         name: event.name,
-        image: `http://localhost:5000/uploads/images/${event.image}`,
+        image: `http://localhost:5000${event.image}`,
         date: typeof event.date === 'object' 
           ? event.date.toLocaleDateString('en-US', {day: 'numeric', month: 'long', year: 'numeric'})
           : event.date,
@@ -115,7 +115,7 @@ export default function EventSummary({
     <div className="bg-primary text-white rounded-lg p-4 md:p-6 h-fit">
       <div className="flex mb-4 gap-4">
         <img
-          src={`http://localhost:5000/uploads/images/${event.image}`}
+          src={`http://localhost:5000${event.image}`}
           alt={event.name}
           className="w-20 h-24 object-cover rounded flex-shrink-0"
         />

@@ -372,7 +372,7 @@ export default function MyWaitlistPage(): React.ReactElement {
                     {/* Event Image */}
                     <div className="md:w-40 h-96 md:h-48 flex-shrink-0 flex justify-center">
                       <img
-                        src={`http://localhost:5000/uploads/images/${item.event.image}`}
+                        src={`http://localhost:5000${item.event.image}`}
                         alt={item.event.title}
                         className="w-full h-full object-cover rounded-lg"
                       />

@@ -448,32 +448,35 @@ export default function CreateEvent() {
         quantity: ticket.limit ? parseInt(ticket.limit) : ticket.quantity,
         startDate: new Date(ticket.startDate || eventDetails.date).toISOString(),
         endDate: new Date(ticket.saleEndDate || eventDetails.date).toISOString(),
-        status: "active",
         seatArrangement: {
-          rows: ticket.rows || 0,
-          columns: ticket.columns || 0
-        },
-        bookedSeats: []
+          rows: ticket.rows ? parseInt(String(ticket.rows)) : 0,
+          columns: ticket.columns ? parseInt(String(ticket.columns)) : 0
+        }
       }));
 
       // Hitung total kapasitas dari semua tiket
       const totalCapacity = formattedTickets.reduce((total, ticket) => {
-        return total + ticket.quantity;
+        return total + (typeof ticket.quantity === 'number' ? ticket.quantity : parseInt(String(ticket.quantity)));
       }, 0);
       
       // Format promo sesuai yang diharapkan
       const formattedPromos = promotionalOffers.map(promo => ({
         name: promo.name,
-        description: promo.description || "",
+        description: promo.description || `Promo ${promo.code}`,
         code: promo.code,
         discountType: promo.discountType,
-        discountValue: promo.discountValue,
-        maxUses: promo.maxUses,
-        currentUses: promo.currentUses,
+        discountValue: parseInt(String(promo.discountValue)),
+        maxUses: parseInt(String(promo.maxUses)),
+        currentUses: parseInt(String(promo.currentUses)) || 0,
         validFrom: new Date(promo.validFrom).toISOString(),
         validUntil: new Date(promo.validUntil).toISOString(),
-        active: promo.active
+        active: true
       }));
+
+      // Format tags
+      const formattedTags = Array.isArray(eventDetails.tags) 
+        ? eventDetails.tags 
+        : (tagsString ? tagsString.split(',').map(tag => tag.trim()).filter(tag => tag !== '') : []);
 
       // Buat data event sesuai format yang diharapkan server
       const eventData = {
@@ -482,19 +485,21 @@ export default function CreateEvent() {
         date: new Date(eventDetails.date).toISOString(),
         time: eventDetails.time,
         location: eventDetails.location,
-        image: imageFile ? imageFile.name : "event-poster.jpg",
+        image: imageFile, // File object langsung
         totalSeats: totalCapacity,
         availableSeats: totalCapacity,
         published: true,
         approvalStatus: "pending",
-        tags: eventDetails.tags || [],
+        tags: formattedTags,
         tickets: formattedTickets,
-        promotionalOffers: formattedPromos
+        promotionalOffers: formattedPromos.length > 0 ? formattedPromos : []
       };
 
       console.log('Data yang akan dikirim ke server:', eventData);
       
+      // Gunakan createEvent yang sudah ada
       const response = await eventService.createEvent(eventData as any) as unknown as EventResponse;
+      
       console.log('Response dari server:', response);
       
       // Tampilkan modal sukses

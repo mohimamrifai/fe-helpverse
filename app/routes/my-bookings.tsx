@@ -410,7 +410,7 @@ export default function MyBookingsPage(): React.ReactElement {
                     {/* Event Image */}
                     <div className="md:w-56 h-96 md:h-auto flex-shrink-0">
                       <img
-                        src={`http://localhost:5000/uploads/images/${booking.eventImage}`}
+                        src={`http://localhost:5000${booking.eventImage}`}
                         alt={booking.eventName}
                         className="w-full h-full object-cover rounded-lg"
                       />
