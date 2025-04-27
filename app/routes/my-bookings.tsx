@@ -293,6 +293,84 @@ export default function MyBookingsPage(): React.ReactElement {
     }
   };
 
+  // Fungsi untuk memeriksa apakah tanggal acara kurang dari 7 hari dari sekarang
+  const isLessThan7DaysBeforeEvent = (eventDateStr: string): boolean => {
+    try {
+      // Jika format tanggal dari API adalah timestamp atau ISO string, gunakan Date.parse
+      // Mencoba parsing dengan Date.parse terlebih dahulu
+      let eventDate = new Date(Date.parse(eventDateStr));
+      
+      // Jika parsing tidak valid, coba dengan pendekatan manual
+      if (isNaN(eventDate.getTime())) {
+        // Coba mendeteksi format yang umum untuk tanggal
+        // Format yang mungkin: "10 Agustus 2025", "August 10, 2025", etc.
+        
+        // Coba untuk format "DD Month YYYY"
+        const datePattern1 = /(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/;
+        const match1 = eventDateStr.match(datePattern1);
+        
+        // Coba untuk format "Month DD, YYYY"
+        const datePattern2 = /([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})/;
+        const match2 = eventDateStr.match(datePattern2);
+        
+        if (match1) {
+          const day = parseInt(match1[1]);
+          const monthName = match1[2];
+          const year = parseInt(match1[3]);
+          
+          // Mapping nama bulan ke indeks
+          const monthIndex = getMonthIndex(monthName);
+          if (monthIndex !== -1) {
+            eventDate = new Date(year, monthIndex, day);
+          }
+        } else if (match2) {
+          const monthName = match2[1];
+          const day = parseInt(match2[2]);
+          const year = parseInt(match2[3]);
+          
+          // Mapping nama bulan ke indeks
+          const monthIndex = getMonthIndex(monthName);
+          if (monthIndex !== -1) {
+            eventDate = new Date(year, monthIndex, day);
+          }
+        }
+      }
+      
+      // Jika tanggal masih tidak valid, return false
+      if (isNaN(eventDate.getTime())) {
+        console.error('Invalid date after parsing:', eventDateStr);
+        return false;
+      }
+      
+      const today = new Date();
+      
+      // Hitung selisih hari
+      const diffTime = eventDate.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      return diffDays < 7;
+    } catch (error) {
+      console.error('Error parsing date:', error);
+      return false; // Default ke false jika ada error
+    }
+  };
+  
+  // Fungsi helper untuk mendapatkan indeks bulan dari nama bulan
+  const getMonthIndex = (monthName: string): number => {
+    const monthsID = ['januari', 'februari', 'maret', 'april', 'mei', 'juni', 'juli', 'agustus', 'september', 'oktober', 'november', 'desember'];
+    const monthsEN = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+    
+    const lowerMonthName = monthName.toLowerCase();
+    
+    const idIndex = monthsID.indexOf(lowerMonthName);
+    if (idIndex !== -1) return idIndex;
+    
+    const enIndex = monthsEN.indexOf(lowerMonthName);
+    if (enIndex !== -1) return enIndex;
+    
+    return -1;
+  };
+
   if (loading) {
     return (
       <main className="bg-secondary min-h-screen">
@@ -469,18 +547,23 @@ export default function MyBookingsPage(): React.ReactElement {
                       </div>
 
                       <div className="mt-4">
-                        {booking.status === 'active' && (
+                        {booking.status === 'active' && !isLessThan7DaysBeforeEvent(booking.date) && (
                           <button 
                             className="w-full text-white px-4 py-2 rounded-full bg-red-500 hover:bg-red-600"
                             onClick={() => handleCancelBooking(booking.id)}
                             disabled={cancelLoading === booking.id}
                           >
-                            {cancelLoading === booking.id ? 'Processing...' : 'Cancel'}
+                            {cancelLoading === booking.id ? 'Processing...' : 'Cancel Booking'}
                           </button>
+                        )}
+                        {booking.status === 'active' && isLessThan7DaysBeforeEvent(booking.date) && (
+                          <div className="text-sm bg-yellow-100 text-yellow-800 p-3 rounded-md mb-3">
+                            Cancellations are not allowed within 7 days of the event.
+                          </div>
                         )}
                         <div className="mt-2 text-sm text-secondary">
                           <p>* Tickets are non-refundable</p>
-                          <p>* Ticket cancellation can only be done 7 days before the event</p>
+                          <p>* Ticket cancellation is only allowed up to 7 days before the event</p>
                         </div>
                       </div>
 
