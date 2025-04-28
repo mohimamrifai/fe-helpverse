@@ -2,6 +2,7 @@ import { Link } from 'react-router';
 import { FaCalendarAlt, FaClock, FaMapMarkerAlt } from 'react-icons/fa';
 import type { Event } from '~/services/event';
 import type { GeneratedSeat } from './SeatMap';
+import { useAuth } from '~/contexts/auth';
 
 interface EventSummaryProps {
   event: Event;
@@ -18,6 +19,13 @@ export default function EventSummary({
   onRemoveSelection,
   eventId,
 }: EventSummaryProps) {
+
+
+  const { user, loading } = useAuth();
+
+  const isAdmin = user?.role === "admin";
+  const isEventOrganizer = user?.role === "eventOrganizer";
+  const isRegularUser = !user || user.role === "user";
 
   // Get the actual seat IDs from the combined format "ticketTypeId:seatId"
   const getActualSeatIds = () => {
@@ -37,10 +45,10 @@ export default function EventSummary({
       const parts = combinedId.split(':');
       const ticketTypeId = parts.length > 1 ? parts[0] : '';
       const seatId = parts.length > 1 ? parts[1] : combinedId;
-      
+
       const seat = generatedSeats.find(s => s.id === seatId && s.ticketTypeId === ticketTypeId);
       if (!seat) return '';
-      
+
       const ticket = event.tickets.find(t => t._id === seat.ticketTypeId);
       return ticket ? ticket.name : '';
     }).filter(Boolean);
@@ -59,14 +67,14 @@ export default function EventSummary({
     selectedSeats.forEach(combinedId => {
       const parts = combinedId.split(':');
       if (parts.length < 2) return;
-      
+
       const ticketTypeId = parts[0];
       const seatId = parts[1];
-      
-      const seat = generatedSeats.find(s => 
+
+      const seat = generatedSeats.find(s =>
         s.id === seatId && s.ticketTypeId === ticketTypeId
       );
-      
+
       if (seat) {
         total += seat.price;
       }
@@ -80,14 +88,14 @@ export default function EventSummary({
     // Get the clean seat IDs without the ticketType prefix
     const cleanSeatIds = getActualSeatIds();
     console.log("Selected seats for payment:", cleanSeatIds);
-    
+
     return {
       eventData: {
         id: eventId,
         name: event.name,
         image: `http://localhost:5000${event.image}`,
-        date: typeof event.date === 'object' 
-          ? event.date.toLocaleDateString('en-US', {day: 'numeric', month: 'long', year: 'numeric'})
+        date: typeof event.date === 'object'
+          ? event.date.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })
           : event.date,
         time: event.time,
         location: event.location
@@ -98,7 +106,7 @@ export default function EventSummary({
       totalPrice: calculateTotalPrice()
     };
   };
-  
+
   // Prepare data to send to waitlist page
   const prepareWaitlistData = () => {
     return {
@@ -106,8 +114,8 @@ export default function EventSummary({
         id: eventId,
         name: event.name,
         image: `http://localhost:5000${event.image}`,
-        date: typeof event.date === 'object' 
-          ? event.date.toLocaleDateString('en-US', {day: 'numeric', month: 'long', year: 'numeric'})
+        date: typeof event.date === 'object'
+          ? event.date.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })
           : event.date,
         time: event.time,
         location: event.location
@@ -133,8 +141,8 @@ export default function EventSummary({
             <div className="flex items-center gap-2">
               <FaCalendarAlt className="w-4 h-4 opacity-80 flex-shrink-0" />
               <span className="text-sm">
-                {typeof event.date === 'object' 
-                  ? event.date.toLocaleDateString('en-US', {day: 'numeric', month: 'long', year: 'numeric'})
+                {typeof event.date === 'object'
+                  ? event.date.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })
                   : event.date}
               </span>
             </div>
@@ -173,13 +181,13 @@ export default function EventSummary({
             </button>
 
             <Link
-              to={selectedSeats.length > 0 ? `/event/${eventId}/payment` : '#'}
-              state={selectedSeats.length > 0 ? preparePaymentData() : undefined}
+              to={selectedSeats.length > 0 && !isEventOrganizer && !isAdmin ? `/event/${eventId}/payment` : '#'}
+              state={selectedSeats.length > 0 && !isEventOrganizer && !isAdmin ? preparePaymentData() : undefined}
               className={`bg-[#FEB32B] p-2 rounded-full font-bold text-white cursor-pointer w-full text-center text-sm ${
-                selectedSeats.length === 0 ? 'cursor-not-allowed' : 'hover:translate-y-[-2px]'
+                selectedSeats.length === 0 || isEventOrganizer || isAdmin ? 'cursor-not-allowed opacity-60' : 'hover:translate-y-[-2px]'
               }`}
               onClick={(e) => {
-                if (selectedSeats.length === 0) {
+                if (selectedSeats.length === 0 || isEventOrganizer || isAdmin) {
                   e.preventDefault();
                 }
               }}
@@ -195,6 +203,12 @@ export default function EventSummary({
           >
             Join Waitlist
           </Link>
+
+          <p className='text-xs text-red-500 mt-1'>
+            {isRegularUser ? 'Please login to book tickets' : ''}
+            {isEventOrganizer ? 'Your role is event organizer, you can\'t book tickets' : ''}
+            {isAdmin ? 'Your role is admin, you can\'t book tickets' : ''}
+          </p>
         </div>
       </div>
     </div>

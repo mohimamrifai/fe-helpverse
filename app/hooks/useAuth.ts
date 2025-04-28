@@ -77,11 +77,32 @@ export const useRegisterEventOrganizer = () => {
     try {
       setLoading(true);
       setError(null);
-      const userData = await authService.registerEventOrganizer(data);
+      
+      // Salin dan pastikan semua properti ada dengan format yang diharapkan
+      const formattedData = {
+        ...data,
+        username: data.username.trim(),
+        fullName: data.fullName.trim(),
+        email: data.email.trim(),
+        phone: data.phone.trim(),
+        organizerName: data.organizerName.trim(),
+        password: data.password,
+        agreeTerms: data.agreeTerms,
+        role: 'eventOrganizer' as const
+      };
+      
+      console.log('Data terformat yang akan dikirim ke authService:', formattedData);
+      
+      // Saat admin mendaftarkan EO, hasilnya berupa data event organizer baru, bukan admin yang login
+      const userData = await authService.registerEventOrganizer(formattedData);
+      
+      console.log('Event organizer berhasil didaftarkan:', userData);
       // Simpan data event organizer baru tanpa mengganti state user saat ini
       setNewEventOrganizer(userData);
+      
       return userData;
     } catch (err) {
+      console.error('Error in useRegisterEventOrganizer:', err);
       setError(err instanceof Error ? err.message : 'Registration failed');
       throw err;
     } finally {

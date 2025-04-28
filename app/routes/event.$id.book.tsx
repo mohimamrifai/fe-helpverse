@@ -61,7 +61,7 @@ export default function EventBookingPage() {
                 // Generate seats from ticket data
                 const seats = generateSeatsFromTickets(eventData);
                 setGeneratedSeats(seats);
-                
+
                 setEvent(eventData);
             } catch (err) {
                 console.error('Error fetching event details:', err);
@@ -77,19 +77,19 @@ export default function EventBookingPage() {
     // Handle seat click
     const handleSeatClick = (seatId: string, ticketTypeId: string) => {
         const combinedId = `${ticketTypeId}:${seatId}`;
-        
+
         if (selectedSeats.includes(combinedId)) {
             setSelectedSeats(selectedSeats.filter(seat => seat !== combinedId));
         } else {
             // Limit number of seats based on ticket quantity
             const ticketType = event?.tickets.find(t => t._id === ticketTypeId);
             const maxSeats = ticketType?.quantity || 10;
-            
+
             // Count how many seats are selected from this ticket type
-            const sameTicketSeats = selectedSeats.filter(seat => 
+            const sameTicketSeats = selectedSeats.filter(seat =>
                 seat.startsWith(`${ticketTypeId}:`)
             ).length;
-            
+
             if (sameTicketSeats < maxSeats) {
                 setSelectedSeats([...selectedSeats, combinedId]);
             } else {
@@ -115,14 +115,14 @@ export default function EventBookingPage() {
         selectedSeats.forEach(combinedId => {
             const parts = combinedId.split(':');
             if (parts.length < 2) return;
-            
+
             const ticketTypeId = parts[0];
             const seatId = parts[1];
-            
-            const seat = generatedSeats.find(s => 
+
+            const seat = generatedSeats.find(s =>
                 s.id === seatId && s.ticketTypeId === ticketTypeId
             );
-            
+
             if (seat) {
                 total += seat.price;
             }
@@ -181,17 +181,17 @@ export default function EventBookingPage() {
                 <div className="flex flex-col md:flex-row gap-4">
                     {/* Seat map */}
                     <div className="bg-gray-200 rounded-lg p-2 md:p-4 w-full md:w-[70%] overflow-x-auto">
-                        <SeatMap 
-                            tickets={event.tickets} 
-                            generatedSeats={generatedSeats} 
-                            selectedSeats={selectedSeats} 
+                        <SeatMap
+                            tickets={event.tickets}
+                            generatedSeats={generatedSeats}
+                            selectedSeats={selectedSeats}
                             onSeatClick={handleSeatClick}
                         />
                     </div>
 
                     {/* Event details and seat selection */}
                     <div className="w-full md:w-[30%]">
-                        <EventSummary 
+                        <EventSummary
                             event={event}
                             selectedSeats={selectedSeats}
                             generatedSeats={generatedSeats}

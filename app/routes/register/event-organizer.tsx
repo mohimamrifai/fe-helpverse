@@ -146,22 +146,31 @@ export default function RegisterEventOrganizer() {
       };
       console.log('Data yang akan dikirim ke API:', dataToSubmit);
       
-      await register(dataToSubmit);
+      const result = await register(dataToSubmit);
+      console.log('Registration result:', result);
       
       // Tampilkan modal sukses
       setModalData({
         title: 'Pendaftaran Berhasil',
-        message: 'Akun event organizer Anda telah berhasil dibuat. Anda akan diarahkan ke halaman utama.',
+        message: 'Akun event organizer telah berhasil dibuat. Anda akan diarahkan ke halaman utama.',
         status: 'success'
       });
       setShowModal(true);
     } catch (err) {
       console.error('Registration error:', err);
       
+      // Dapatkan pesan error yang spesifik jika ada
+      let errorMessage = 'Terjadi kesalahan saat mendaftarkan akun. Silakan coba lagi.';
+      if (error) {
+        errorMessage = error;
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      
       // Tampilkan modal error
       setModalData({
         title: 'Pendaftaran Gagal',
-        message: error || 'Terjadi kesalahan saat mendaftarkan akun Anda. Silakan coba lagi.',
+        message: errorMessage,
         status: 'error'
       });
       setShowModal(true);

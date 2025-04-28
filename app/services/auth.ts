@@ -84,15 +84,21 @@ api.interceptors.request.use(
 
 // Fungsi untuk normalisasi data user
 const normalizeUser = (userData: any): User => {
+  // Pastikan userData tidak null/undefined
+  if (!userData) {
+    console.error('userData tidak valid:', userData);
+    throw new Error('Data user tidak valid');
+  }
+  
   return {
-    id: userData.id || userData._id,
-    _id: userData._id || userData.id,
-    username: userData.username,
-    email: userData.email,
-    fullName: userData.fullName,
-    phone: userData.phone || '',
-    organizerName: userData.organizerName || userData.organizationName,
-    role: userData.role,
+    id: userData.id || userData._id || 'unknown-id',
+    _id: userData._id || userData.id || 'unknown-id',
+    username: userData.username || 'unknown-username',
+    email: userData.email || 'unknown-email',
+    fullName: userData.fullName || userData.full_name || userData.name || 'Unknown',
+    phone: userData.phone || userData.phoneNumber || '',
+    organizerName: userData.organizerName || userData.organizationName || userData.organization_name || undefined,
+    role: userData.role || 'user',
     createdAt: userData.createdAt ? new Date(userData.createdAt) : new Date(),
     updatedAt: userData.updatedAt ? new Date(userData.updatedAt) : new Date()
   };
@@ -174,13 +180,38 @@ export const authService = {
       
       console.log('API response:', response.data);
       
-      if (response.data.success) {
-        // Tidak menyimpan token baru ke localStorage untuk mencegah admin berubah menjadi event organizer
-        // Hanya mengembalikan data user event organizer yang baru dibuat
+      // Periksa status code terlebih dahulu
+      // Status 201 atau 200 menunjukkan operasi berhasil meskipun 'success' mungkin tidak ada
+      if (response.status === 201 || response.status === 200 || response.data.success) {
+        // Jika ada data user di respons
         if (response.data.data) {
           return normalizeUser(response.data.data);
-        } else {
-          // Jika server tidak mengembalikan data user, lempar error
+        } 
+        // Jika respons langsung berupa user data (tanpa wrapper)
+        else if ((response.data as any)._id || (response.data as any).id) {
+          return normalizeUser(response.data as any);
+        }
+        // Kasus khusus: saat admin mendaftarkan EO, server hanya mengembalikan success dan token
+        // Dalam kasus ini, kita buat objek user dummy dengan data yang ada
+        else if (response.data.success && response.data.token) {
+          console.log('Registrasi event organizer berhasil oleh admin, token diterima');
+          // Buat objek user dummy dengan data yang dikirim ke API
+          const dummyUser: User = {
+            id: 'temp-eo-id',
+            _id: 'temp-eo-id',
+            username: params.username,
+            email: params.email,
+            fullName: params.fullName,
+            phone: params.phone,
+            organizerName: params.organizerName,
+            role: 'eventOrganizer',
+            createdAt: new Date(),
+            updatedAt: new Date()
+          };
+          return dummyUser;
+        }
+        // Jika tidak ada data user sama sekali, lempar error
+        else {
           throw new Error('Server tidak mengembalikan data user');
         }
       }
