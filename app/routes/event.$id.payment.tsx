@@ -569,18 +569,82 @@ export default function EventPaymentPage(): React.ReactElement {
                             </div>
 
                             <div className="border-t border-primary py-4">
-                                <div className="flex justify-between items-start mb-2 py-3 border-y border-secondary">
-                                    <div className='flex items-center gap-2'>
-                                        <div className='w-10 h-10 bg-white rounded-sm flex items-center justify-center text-primary text-sm'>{paymentInfo.selectedSeats.length}</div>
-                                        <div className='flex flex-col gap-1'>
-                                            <div className='text-sm font-bold'>{paymentInfo.ticketType}</div>
-                                            <div className='text-xs text-foreground-muted'>{paymentInfo.selectedSeatsLabels.join(', ')}</div>
-                                        </div>
-                                    </div>
-                                    <div className='flex flex-col gap-1'>
-                                        <div className='text-sm text-foreground-muted'>{paymentInfo.selectedSeats.length} x RM{(paymentInfo.totalPrice / paymentInfo.selectedSeats.length).toFixed(0)}</div>
-                                        <div className='text-xs font-bold'>RM{paymentInfo.totalPrice}</div>
-                                    </div>
+                                <div className="flex flex-col gap-2">
+                                    {/* Grup tiket-tiket berdasarkan tipe */}
+                                    {(() => {
+                                        // Ekstrak ticket type id dari selected seats
+                                        const ticketTypes = new Map();
+                                        
+                                        // Kelompokkan tiket berdasarkan tipe tiket
+                                        paymentInfo.selectedSeats.forEach(combinedId => {
+                                            const [ticketTypeId, seatId] = combinedId.split(':');
+                                            
+                                            if (!ticketTypes.has(ticketTypeId)) {
+                                                ticketTypes.set(ticketTypeId, {
+                                                    seats: [],
+                                                    seatLabels: [],
+                                                    ticketType: '',
+                                                    pricePerSeat: 0
+                                                });
+                                            }
+                                            
+                                            // Dapatkan label kursi dari seatId
+                                            const seatIndex = paymentInfo.selectedSeats.indexOf(combinedId);
+                                            const seatLabel = paymentInfo.selectedSeatsLabels[seatIndex];
+                                            
+                                            // Update data tiket ini
+                                            const typeData = ticketTypes.get(ticketTypeId);
+                                            typeData.seats.push(combinedId);
+                                            typeData.seatLabels.push(seatLabel);
+                                        });
+                                        
+                                        // Ambil informasi harga dan nama tiket
+                                        // Jika tiket memiliki nama berbeda, ini akan menampilkan nama yang berbeda
+                                        const ticketTypeNames = paymentInfo.ticketType.split(', ');
+                                        const pricePerSeat = Math.round(paymentInfo.totalPrice / paymentInfo.selectedSeats.length);
+                                        
+                                        // Mapping nama tiket ke tiket yang dikelompokkan
+                                        // Catatan: Ini akan berfungsi dengan baik jika order group pada ticketTypes sama dengan ticketTypeNames
+                                        let index = 0;
+                                        ticketTypes.forEach((data) => {
+                                            // Jika ada nama tiket yang tersedia, gunakan
+                                            if (index < ticketTypeNames.length) {
+                                                data.ticketType = ticketTypeNames[index];
+                                            } else {
+                                                data.ticketType = `Tiket ${index + 1}`;
+                                            }
+                                            
+                                            // Set harga per kursi
+                                            data.pricePerSeat = pricePerSeat;
+                                            index++;
+                                        });
+                                        
+                                        // Tampilkan tiket yang dikelompokkan
+                                        return Array.from(ticketTypes.entries()).map(([typeId, data]) => {
+                                            const totalForType = data.pricePerSeat * data.seats.length;
+                                            
+                                            return (
+                                                <div 
+                                                    key={typeId} 
+                                                    className="flex justify-between items-start py-3 border-y border-secondary"
+                                                >
+                                                    <div className='flex items-center gap-2'>
+                                                        <div className='w-10 h-10 bg-white rounded-sm flex items-center justify-center text-primary text-sm'>
+                                                            {data.seats.length}
+                                                        </div>
+                                                        <div className='flex flex-col gap-1'>
+                                                            <div className='text-sm font-bold'>{data.ticketType}</div>
+                                                            <div className='text-xs text-foreground-muted'>{data.seatLabels.join(', ')}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className='flex flex-col gap-1'>
+                                                        <div className='text-sm text-foreground-muted'>{data.seats.length} x RM{data.pricePerSeat}</div>
+                                                        <div className='text-xs font-bold'>RM{totalForType}</div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        });
+                                    })()}
                                 </div>
 
                                 <div className="py-4">
