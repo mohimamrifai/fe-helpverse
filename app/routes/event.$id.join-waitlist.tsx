@@ -9,7 +9,7 @@ import { waitingListService } from '~/services/waitingList';
 import type { WaitingListInput } from '~/services/waitingList';
 import { useAuth } from '~/contexts/auth';
 
-// Interface untuk state dari lokasi
+// Interface for location state
 interface LocationState {
     eventData?: {
         id: string;
@@ -18,7 +18,7 @@ interface LocationState {
     };
 }
 
-// Interface untuk modal
+// Interface for modal
 interface ModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -27,7 +27,7 @@ interface ModalProps {
     status: 'success' | 'error';
 }
 
-// Komponen Modal
+// Modal component
 function Modal({ isOpen, onClose, title, message, status }: ModalProps) {
     if (!isOpen) return null;
 
@@ -72,7 +72,7 @@ export default function JoinWaitlistPage() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // State untuk modal
+    // State for modal
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalData, setModalData] = useState({
         title: '',
@@ -80,13 +80,13 @@ export default function JoinWaitlistPage() {
         status: 'success' as 'success' | 'error'
     });
 
-    // State untuk form waiting list
+    // State for waiting list form
     const [formData, setFormData] = useState({
         name: '',
         email: '',
     });
 
-    // Mendapatkan data event dari location state atau fetch dari API
+    // Get event data from location state or fetch from API
     useEffect(() => {
         const fetchEventDetail = async () => {
             try {
@@ -96,10 +96,10 @@ export default function JoinWaitlistPage() {
                     return;
                 }
 
-                // Cek apakah ada data event dari location state
+                // Check if event data exists in location state
                 const state = location.state as LocationState;
                 if (state && state.eventData) {
-                    console.log("Data event diterima dari halaman book:", state.eventData);
+                    console.log("Event data received from book page:", state.eventData);
                 }
 
                 const eventData = await eventService.getEventById(id);
@@ -115,7 +115,7 @@ export default function JoinWaitlistPage() {
         fetchEventDetail();
     }, [id, location.state]);
 
-    // Pre-fill form data jika user sudah login
+    // Pre-fill form data if user is logged in
     useEffect(() => {
         if (isAuthenticated && user) {
             setFormData({
@@ -125,7 +125,7 @@ export default function JoinWaitlistPage() {
         }
     }, [isAuthenticated, user]);
 
-    // Handle perubahan input form
+    // Handle form input changes
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({
@@ -137,13 +137,13 @@ export default function JoinWaitlistPage() {
     // Handle modal close
     const handleModalClose = () => {
         setIsModalOpen(false);
-        // Jika sukses, redirect ke halaman my-waiting-list
+        // If success, redirect to my-waiting-list page
         if (modalData.status === 'success') {
             navigate('/my-waiting-list');
         }
     };
 
-    // Handle submit form
+    // Handle form submission
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -156,25 +156,25 @@ export default function JoinWaitlistPage() {
             setSubmitting(true);
             setError(null);
 
-            // Data waiting list untuk dikirim ke API
+            // Waiting list data to send to API
             const waitingListData: WaitingListInput = {
                 name: formData.name,
                 email: formData.email,
                 event: id
             };
 
-            console.log("Mengirim data waiting list:", waitingListData);
+            console.log("Sending waiting list data:", waitingListData);
 
-            // Gunakan service waiting list untuk mendaftar
+            // Use waiting list service to register
             const result = await waitingListService.registerToWaitingList(waitingListData);
 
-            // Handle sukses
-            console.log('Berhasil mendaftar waiting list:', result);
+            // Handle success
+            console.log('Successfully registered to waiting list:', result);
 
-            // Tampilkan modal sukses
+            // Show success modal
             setModalData({
-                title: 'Pendaftaran Berhasil!',
-                message: 'Anda telah terdaftar dalam waiting list untuk event ini. Kami akan mengirimkan pemberitahuan ke email Anda ketika tiket tersedia.',
+                title: 'Registration Successful!',
+                message: 'You have been registered to the waiting list for this event. We will send a notification to your email when tickets become available.',
                 status: 'success'
             });
             setIsModalOpen(true);
@@ -182,10 +182,10 @@ export default function JoinWaitlistPage() {
         } catch (error: any) {
             console.error('Error registering to waiting list:', error);
 
-            // Tampilkan modal error
+            // Show error modal
             setModalData({
-                title: 'Pendaftaran Gagal',
-                message: error.message || 'Terjadi kesalahan saat mendaftar. Silakan coba lagi.',
+                title: 'Registration Failed',
+                message: error.message || 'An error occurred during registration. Please try again.',
                 status: 'error'
             });
             setIsModalOpen(true);
@@ -194,7 +194,7 @@ export default function JoinWaitlistPage() {
         }
     };
 
-    // Tampilan loading
+    // Loading view
     if (loading) {
         return (
             <main>
@@ -210,7 +210,7 @@ export default function JoinWaitlistPage() {
         );
     }
 
-    // Tampilan error
+    // Error view
     if (error) {
         return (
             <main>
@@ -237,7 +237,7 @@ export default function JoinWaitlistPage() {
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-5 md:w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                             <path fillRule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clipRule="evenodd" />
                         </svg>
-                        Kembali ke Detail Event
+                        Back to Event Details
                     </Link>
                 </div>
 
@@ -262,7 +262,7 @@ export default function JoinWaitlistPage() {
                                 <form onSubmit={handleSubmit} className="max-w-md mx-auto">
                                     <div className="mb-4">
                                         <label htmlFor="name" className="block text-gray-700 font-medium mb-1">
-                                            Nama Lengkap <span className="text-red-500">*</span>
+                                            Full Name <span className="text-red-500">*</span>
                                         </label>
                                         <div className="relative">
                                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -276,7 +276,7 @@ export default function JoinWaitlistPage() {
                                                 onChange={handleInputChange}
                                                 required
                                                 className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                                                placeholder="Masukkan nama lengkap Anda"
+                                                placeholder="Enter your full name"
                                             />
                                         </div>
                                     </div>
@@ -297,11 +297,11 @@ export default function JoinWaitlistPage() {
                                                 onChange={handleInputChange}
                                                 required
                                                 className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                                                placeholder="Masukkan alamat email Anda"
+                                                placeholder="Enter your email address"
                                             />
                                         </div>
                                         <p className="text-gray-500 text-xs mt-1">
-                                            Kami akan mengirimkan pemberitahuan ke alamat email ini
+                                            We will send notifications to this email address
                                         </p>
                                     </div>
 
@@ -314,10 +314,10 @@ export default function JoinWaitlistPage() {
                                             {submitting ? (
                                                 <>
                                                     <FaSpinner className="animate-spin mr-2" />
-                                                    Memproses...
+                                                    Processing...
                                                 </>
                                             ) : (
-                                                'Daftar Waiting List'
+                                                'Join Waiting List'
                                             )}
                                         </button>
                                     </div>

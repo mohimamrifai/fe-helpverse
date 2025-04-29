@@ -87,7 +87,7 @@ export function TicketTypesStep({
                   value={type.description || ''}
                   onChange={(e) => onTicketTypeChange(type.id, 'description', e.target.value)}
                   className="mt-1 block w-full px-3 py-2 sm:px-4 sm:py-3 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm transition duration-150 ease-in-out"
-                  placeholder="Deskripsi tiket"
+                  placeholder="Ticket description"
                   rows={2}
                 />
               </div>
@@ -141,20 +141,23 @@ export function TicketTypesStep({
                   <input
                     type="date"
                     id={`startDate-${type.id}`}
-                    value={type.startDate || ''}
+                    value={type.startDate ? new Date(type.startDate).toISOString().split('T')[0] : ''}
                     onChange={(e) => onTicketTypeChange(type.id, 'startDate', e.target.value)}
                     className="mt-1 block w-full px-3 py-2 sm:px-4 sm:py-3 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm transition duration-150 ease-in-out"
                   />
                 </div>
                 <div>
-                  <label htmlFor={`saleEndDate-${type.id}`} className="block text-xs sm:text-sm font-semibold text-gray-700">
+                  <label htmlFor={`endDate-${type.id}`} className="block text-xs sm:text-sm font-semibold text-gray-700">
                     Sale End Date
                   </label>
                   <input
                     type="date"
-                    id={`saleEndDate-${type.id}`}
-                    value={type.saleEndDate || ''}
-                    onChange={(e) => onTicketTypeChange(type.id, 'saleEndDate', e.target.value)}
+                    id={`endDate-${type.id}`}
+                    value={type.endDate ? new Date(type.endDate).toISOString().split('T')[0] : type.saleEndDate ? new Date(type.saleEndDate).toISOString().split('T')[0] : ''}
+                    onChange={(e) => {
+                      onTicketTypeChange(type.id, 'endDate', e.target.value);
+                      onTicketTypeChange(type.id, 'saleEndDate', e.target.value);
+                    }}
                     className="mt-1 block w-full px-3 py-2 sm:px-4 sm:py-3 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm transition duration-150 ease-in-out"
                   />
                 </div>

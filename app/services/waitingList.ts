@@ -1,12 +1,12 @@
 import axios from 'axios';
 
-// Interface untuk data waiting list
+// Interface for waiting list data
 export interface WaitingList {
   _id: string;
   name: string;
   email: string;
   phone: string;
-  event: string; // ID event
+  event: string; // Event ID
   status: 'pending' | 'approved' | 'rejected';
   registeredAt: Date;
   notes?: string;
@@ -14,7 +14,7 @@ export interface WaitingList {
   updatedAt: Date;
 }
 
-// Interface untuk data respons waiting list
+// Interface for waiting list response data
 export interface WaitingListResponse {
   success: boolean;
   count: number;
@@ -22,26 +22,26 @@ export interface WaitingListResponse {
   message?: string;
 }
 
-// Interface untuk data input waiting list
+// Interface for waiting list input data
 export interface WaitingListInput {
   name: string;
   email: string;
   phone?: string;
-  event: string; // ID event
+  event: string; // Event ID
 }
 
-// Base URL dari API
+// API Base URL
 const API_URL = 'http://localhost:5000';
 
-// Fungsi untuk mengambil token dari localStorage
+// Function to get token from localStorage
 const getToken = () => localStorage.getItem('token');
 
-// Service untuk waiting list
+// Waiting list service
 export const waitingListService = {
   /**
-   * Mendaftar ke waiting list
-   * @param waitingListData Data waiting list
-   * @returns Respons dari API
+   * Register to waiting list
+   * @param waitingListData Waiting list data
+   * @returns Response from API
    */
   async registerToWaitingList(waitingListData: WaitingListInput): Promise<WaitingListResponse> {
     try {
@@ -55,7 +55,7 @@ export const waitingListService = {
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Gagal mendaftar waiting list');
+        throw new Error(errorData.error || 'Failed to register to waiting list');
       }
       
       return await response.json();
@@ -66,9 +66,9 @@ export const waitingListService = {
   },
 
   /**
-   * Mendapatkan daftar waiting list berdasarkan email
-   * @param email Email pengguna
-   * @returns Respons dari API
+   * Get waiting list based on email
+   * @param email User's email
+   * @returns Response from API
    */
   async getUserWaitingList(email: string): Promise<WaitingListResponse> {
     try {
@@ -86,9 +86,9 @@ export const waitingListService = {
   },
 
   /**
-   * Mendapatkan semua data waiting list (Admin)
-   * @param filters Filter untuk waiting list
-   * @returns Respons dari API
+   * Get all waiting list data (Admin)
+   * @param filters Filters for waiting list
+   * @returns Response from API
    */
   async getWaitingList(filters = {}): Promise<WaitingListResponse> {
     try {
@@ -96,7 +96,7 @@ export const waitingListService = {
       const token = getToken();
       
       if (!token) {
-        throw new Error('Anda harus login terlebih dahulu');
+        throw new Error('You must be logged in first');
       }
       
       const response = await fetch(`${API_URL}/api/waiting-list/admin?${queryParams}`, {
@@ -117,10 +117,10 @@ export const waitingListService = {
   },
 
   /**
-   * Memperbarui status waiting list (Admin)
-   * @param waitingListId ID waiting list
-   * @param updateData Data yang akan diperbarui
-   * @returns Respons dari API
+   * Update waiting list status (Admin)
+   * @param waitingListId Waiting list ID
+   * @param updateData Data to update
+   * @returns Response from API
    */
   async updateWaitingListStatus(
     waitingListId: string, 
@@ -130,7 +130,7 @@ export const waitingListService = {
       const token = getToken();
       
       if (!token) {
-        throw new Error('Anda harus login terlebih dahulu');
+        throw new Error('You must be logged in first');
       }
       
       const response = await fetch(`${API_URL}/api/waiting-list/admin/${waitingListId}`, {
@@ -144,7 +144,7 @@ export const waitingListService = {
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Gagal memperbarui status waiting list');
+        throw new Error(errorData.error || 'Failed to update waiting list status');
       }
       
       return await response.json();

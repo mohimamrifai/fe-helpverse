@@ -16,7 +16,7 @@ export function SeatArrangementStep({
   formTouched = false
 }: SeatArrangementStepProps) {
   
-  // Fungsi untuk menangani perubahan jumlah baris
+  // Function to handle row number changes
   const handleRowsChange = (ticketId: string, value: string) => {
     const rows = parseInt(value) || 0;
     const ticket = ticketTypes.find(t => t.id === ticketId);
@@ -24,7 +24,7 @@ export function SeatArrangementStep({
     onSeatLayoutChange(ticketId, rows, columns);
   };
   
-  // Fungsi untuk menangani perubahan jumlah kolom
+  // Function to handle column number changes
   const handleColumnsChange = (ticketId: string, value: string) => {
     const columns = parseInt(value) || 0;
     const ticket = ticketTypes.find(t => t.id === ticketId);
@@ -37,10 +37,10 @@ export function SeatArrangementStep({
       <div>
         <h2 className="text-base sm:text-lg font-semibold text-gray-900 flex items-center">
           <FaChair className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-gray-400" />
-          Pengaturan Kursi
+          Seat Arrangement
         </h2>
         <p className="mt-1 text-xs sm:text-sm text-gray-500">
-          Tentukan jumlah baris dan kolom untuk setiap tipe tiket.
+          Define the number of rows and columns for each ticket type.
         </p>
         
         {/* Error message for seat arrangement */}
@@ -61,7 +61,7 @@ export function SeatArrangementStep({
               <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label htmlFor={`rows-${ticket.id}`} className="block text-xs sm:text-sm font-medium text-gray-700">
-                    Jumlah Baris
+                    Number of Rows
                   </label>
                   <div className="mt-1 relative rounded-md shadow-sm">
                     <input
@@ -76,7 +76,7 @@ export function SeatArrangementStep({
                 </div>
                 <div>
                   <label htmlFor={`columns-${ticket.id}`} className="block text-xs sm:text-sm font-medium text-gray-700">
-                    Jumlah Kolom
+                    Number of Columns
                   </label>
                   <div className="mt-1 relative rounded-md shadow-sm">
                     <input
@@ -94,12 +94,12 @@ export function SeatArrangementStep({
               {/* Seat Preview */}
               {(ticket.rows && ticket.rows > 0 && ticket.columns && ticket.columns > 0) ? (
                 <div className="mt-3">
-                  <h4 className="text-xs sm:text-sm font-medium text-gray-700 mb-2">Preview Pengaturan Kursi</h4>
+                  <h4 className="text-xs sm:text-sm font-medium text-gray-700 mb-2">Preview Seat Arrangement</h4>
                   <div className="bg-gray-50 p-2 sm:p-3 rounded-md overflow-x-auto">
                     <div className="flex flex-col items-center min-w-max">
                       {/* Screen */}
                       <div className="w-full max-w-md mb-3 bg-gray-300 rounded-lg p-1 text-center text-xs text-gray-600">
-                        LAYAR
+                        SCREEN
                       </div>
                       
                       {/* Seats */}
@@ -118,7 +118,7 @@ export function SeatArrangementStep({
                       
                       {((ticket.rows || 0) > 15 || (ticket.columns || 0) > 20) && (
                         <div className="mt-2 text-xs text-center text-gray-500 italic">
-                          Preview menampilkan maksimal 15 baris x 20 kolom dari total {ticket.rows} baris x {ticket.columns} kolom
+                          Preview shows maximum 15 rows x 20 columns out of total {ticket.rows} rows x {ticket.columns} columns
                         </div>
                       )}
                     </div>
@@ -126,13 +126,13 @@ export function SeatArrangementStep({
                 </div>
               ) : (
                 <div className="mt-3 text-xs text-gray-500 italic">
-                  Tentukan jumlah baris dan kolom untuk melihat preview pengaturan kursi.
+                  Specify the number of rows and columns to see the seat arrangement preview.
                 </div>
               )}
               
               <div className="mt-3 bg-yellow-50 rounded-md p-2 sm:p-3 text-xs sm:text-sm text-yellow-800">
-                <strong>Catatan:</strong> Jumlah kursi aktual ({((ticket.rows || 0) * (ticket.columns || 0)).toLocaleString()}) 
-                mungkin berbeda dengan jumlah tiket yang tersedia ({parseInt(ticket.limit || '0').toLocaleString()}) karena batasan kapasitas.
+                <strong>Note:</strong> The actual number of seats ({((ticket.rows || 0) * (ticket.columns || 0)).toLocaleString()}) 
+                may differ from the number of available tickets ({parseInt(ticket.limit || '0').toLocaleString()}) due to capacity constraints.
               </div>
             </div>
           ))}

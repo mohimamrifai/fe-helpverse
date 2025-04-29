@@ -19,7 +19,7 @@ export function AuthGuard({
   
   useEffect(() => {
     if (!loading) {
-      // Jika tidak terautentikasi, redirect ke halaman login
+      // If not authenticated, redirect to login page
       if (!isAuthenticated) {
         navigate(fallbackPath, { 
           state: { from: window.location.pathname } 
@@ -27,19 +27,19 @@ export function AuthGuard({
         return;
       }
       
-      // Jika ada allowedRoles dan role user tidak termasuk dalam allowedRoles
+      // If there are allowedRoles and user's role is not included in allowedRoles
       if (allowedRoles.length > 0 && user?.role && !allowedRoles.includes(user.role as any)) {
-        // Redirect ke homepage jika role tidak sesuai
+        // Redirect to homepage if role doesn't match
         navigate("/", { 
           state: { 
-            error: "Anda tidak memiliki akses ke halaman ini" 
+            error: "You don't have access to this page" 
           } 
         });
       }
     }
   }, [loading, isAuthenticated, user, allowedRoles, navigate, fallbackPath]);
 
-  // Tampilkan loading atau konten jika sudah terautentikasi dan memiliki role yang sesuai
+  // Display loading or content if authenticated and has appropriate role
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -48,13 +48,13 @@ export function AuthGuard({
     );
   }
 
-  // Jika tidak terautentikasi atau role tidak sesuai, komponen akan redirect
-  // Jadi kita hanya perlu menampilkan children jika sudah terautentikasi dan role sesuai
+  // If not authenticated or role doesn't match, component will redirect
+  // So we only need to display children if already authenticated and role matches
   if (isAuthenticated && (allowedRoles.length === 0 || (user?.role && allowedRoles.includes(user.role as any)))) {
     return <>{children}</>;
   }
 
-  // Tampilkan loading saat proses redirect
+  // Display loading during redirect process
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>

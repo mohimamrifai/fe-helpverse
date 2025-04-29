@@ -8,6 +8,7 @@ export default [
     route("register", "routes/register.tsx"), // register user
     route("register/event-organizer", "routes/register/event-organizer.tsx"), // register event organizer
     route("event/create", "routes/event/create.tsx"), // create event
+    route("event/edit/:id", "routes/event/edit.$id.tsx"), // edit event
     // route("event/create/seat-arrangement", "routes/event/create/seat-arrangement.tsx"), // seat arrangement
     route("event/:id/book", "routes/event.$id.book.tsx"), // book event
     route("event/:id/payment", "routes/event.$id.payment.tsx"), // payment

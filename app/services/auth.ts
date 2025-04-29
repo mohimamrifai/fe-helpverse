@@ -1,28 +1,28 @@
 import axios from 'axios';
 
-// Definisi tipe untuk user sesuai dengan dokumentasi API
+// User type definition according to API documentation
 export interface User {
   id: string;
   _id: string;
   username: string;
   email: string;
-  password?: string; // Password tidak akan dikembalikan dari API, tapi dibutuhkan untuk registrasi
+  password?: string; // Password won't be returned from API, but needed for registration
   fullName: string;
   phone: string;
-  organizerName?: string; // Wajib untuk event organizer
+  organizerName?: string; // Required for event organizers
   role: 'user' | 'eventOrganizer' | 'admin';
   createdAt: Date;
   updatedAt: Date;
 }
 
-// Definisi tipe untuk parameter login
+// Login parameters type definition
 interface LoginParams {
-  username: string; // Username atau email
+  username: string; // Username or email
   password: string;
   rememberMe: boolean;
 }
 
-// Definisi tipe untuk parameter registrasi pengguna biasa
+// Regular user registration parameters type definition
 interface RegisterUserParams {
   username: string;
   fullName: string;
@@ -53,10 +53,10 @@ interface AuthResponse {
   message?: string;
 }
 
-// Base URL dari API
+// Base URL of the API
 const API_URL = 'http://localhost:5000';
 
-// Fungsi untuk mengambil token dari localStorage
+// Function to get token from localStorage
 const getToken = () => localStorage.getItem('token');
 
 // Axios instance dengan header Authorization
@@ -105,7 +105,7 @@ const normalizeUser = (userData: any): User => {
 };
 
 export const authService = {
-  // Fungsi untuk login
+  // Login function
   async login(params: LoginParams): Promise<User> {
     try {
       const { username, password, rememberMe } = params;
@@ -135,12 +135,12 @@ export const authService = {
     }
   },
 
-  // Fungsi untuk registrasi pengguna biasa
+  // Function for registering regular users
   async registerUser(params: RegisterUserParams): Promise<User> {
     try {
-      // Pastikan semua field yang diperlukan tersedia
+      // Make sure all required fields are available
       if (!params.username || !params.fullName || !params.email || !params.phone || !params.password) {
-        throw new Error('Semua field harus diisi');
+        throw new Error('All fields must be filled');
       }
       
       const response = await api.post<AuthResponse>('/api/auth/register', params);
@@ -272,7 +272,7 @@ export const authService = {
     }
   },
 
-  // Fungsi untuk memeriksa apakah user sedang terautentikasi
+  // Function to check if user is authenticated
   isAuthenticated(): boolean {
     return !!getToken();
   }

@@ -84,56 +84,50 @@ export default function CreateEvent() {
   const validateCurrentStep = () => {
     const newErrors: {[key: string]: string} = {};
     
-    // Validasi Step 1: Event Details
+    // Validate Step 1: Event Details
     if (currentStep === 1) {
-      // Validasi hanya untuk field yang telah disentuh
       if (touchedFields['name'] && !eventDetails.name) 
-        newErrors.name = 'Nama acara wajib diisi';
+        newErrors.name = 'Event name is required';
       if (touchedFields['description'] && !eventDetails.description) 
-        newErrors.description = 'Deskripsi acara wajib diisi';
+        newErrors.description = 'Event description is required';
       if (touchedFields['date'] && !eventDetails.date) 
-        newErrors.date = 'Tanggal acara wajib diisi';
+        newErrors.date = 'Event date is required';
       if (touchedFields['time'] && !eventDetails.time) 
-        newErrors.time = 'Waktu acara wajib diisi';
+        newErrors.time = 'Event time is required';
       if (touchedFields['location'] && !eventDetails.location) 
-        newErrors.location = 'Lokasi acara wajib diisi';
-      // if (touchedFields['image'] && !imagePreview) newErrors.image = 'Poster acara wajib diupload';
+        newErrors.location = 'Event location is required';
     }
     
-    // Validasi Step 2: Ticket Types
+    // Validate Step 2: Ticket Types
     else if (currentStep === 2) {
-      // Validasi keberadaan tiket hanya jika formTouched
       if (formTouched && ticketTypes.length === 0) {
-        newErrors.ticketTypes = 'Minimal harus ada 1 tipe tiket';
+        newErrors.ticketTypes = 'At least 1 ticket type is required';
       } else {
-        // Validasi tiap field tiket hanya jika field tersebut telah disentuh
         ticketTypes.forEach((ticket, index) => {
           const ticketNameKey = `ticket-${index}-name`;
           const ticketPriceKey = `ticket-${index}-price`;
           const ticketLimitKey = `ticket-${index}-limit`;
 
           if (touchedFields[ticketNameKey] && !ticket.name) 
-            newErrors[ticketNameKey] = 'Nama tiket wajib diisi';
+            newErrors[ticketNameKey] = 'Ticket name is required';
           if (touchedFields[ticketPriceKey] && (!ticket.price || parseInt(ticket.price) <= 0))
-            newErrors[ticketPriceKey] = 'Harga tiket harus lebih dari 0';
+            newErrors[ticketPriceKey] = 'Ticket price must be greater than 0';
           if (touchedFields[ticketLimitKey] && (!ticket.limit || parseInt(ticket.limit) <= 0))
-            newErrors[ticketLimitKey] = 'Jumlah tiket harus lebih dari 0';
+            newErrors[ticketLimitKey] = 'Ticket quantity must be greater than 0';
         });
       }
     }
     
-    // Validasi Step 3: Seat Arrangement
+    // Validate Step 3: Seat Arrangement
     else if (currentStep === 3) {
-      // Validasi seat arrangement hanya jika form telah disentuh
       const hasSeatArrangement = ticketTypes.some(t => (t.rows || 0) > 0 && (t.columns || 0) > 0);
       if (formTouched && !hasSeatArrangement && ticketTypes.length > 0) {
-        newErrors.seatArrangement = 'Minimal satu tipe tiket harus memiliki pengaturan kursi';
+        newErrors.seatArrangement = 'At least one ticket type must have seat arrangement';
       }
     }
     
-    // Validasi Step 4: Promotional Offers (opsional)
+    // Validate Step 4: Promotional Offers (optional)
     else if (currentStep === 4) {
-      // Validasi format kode promo hanya jika field tersebut telah disentuh
       promotionalOffers.forEach((promo, index) => {
         const nameKey = `promo-${index}-name`;
         const codeKey = `promo-${index}-code`;
@@ -143,30 +137,30 @@ export default function CreateEvent() {
         const dateRangeKey = `promo-${index}-dateRange`;
         
         if (touchedFields[nameKey] && !promo.name) {
-          newErrors[nameKey] = 'Nama promo wajib diisi';
+          newErrors[nameKey] = 'Promo name is required';
         }
         if (touchedFields[codeKey]) {
           if (!promo.code) {
-            newErrors[codeKey] = 'Kode promo wajib diisi';
+            newErrors[codeKey] = 'Promo code is required';
           } else if (!/^[A-Z0-9_-]+$/.test(promo.code)) {
-            newErrors[codeKey] = 'Kode promo hanya boleh berisi huruf kapital, angka, underscore, dan dash';
+            newErrors[codeKey] = 'Promo code may only contain capital letters, numbers, underscores, and dashes';
           }
         }
         if (touchedFields[validFromKey] && !promo.validFrom) {
-          newErrors[validFromKey] = 'Tanggal mulai berlaku wajib diisi';
+          newErrors[validFromKey] = 'Start date is required';
         }
         if (touchedFields[validUntilKey] && !promo.validUntil) {
-          newErrors[validUntilKey] = 'Tanggal berakhir wajib diisi';
+          newErrors[validUntilKey] = 'End date is required';
         }
         if ((touchedFields[dateRangeKey] || (touchedFields[validFromKey] && touchedFields[validUntilKey])) && 
             promo.validFrom && promo.validUntil && new Date(promo.validFrom) > new Date(promo.validUntil)) {
-          newErrors[dateRangeKey] = 'Tanggal mulai harus sebelum tanggal berakhir';
+          newErrors[dateRangeKey] = 'Start date must be before end date';
         }
         if (touchedFields[discountValueKey] && promo.discountValue <= 0) {
-          newErrors[discountValueKey] = 'Nilai diskon harus lebih dari 0';
+          newErrors[discountValueKey] = 'Discount value must be greater than 0';
         }
         if (touchedFields[discountValueKey] && promo.discountType === 'percentage' && promo.discountValue > 100) {
-          newErrors[discountValueKey] = 'Nilai diskon persentase tidak boleh lebih dari 100%';
+          newErrors[discountValueKey] = 'Percentage discount value cannot be greater than 100%';
         }
       });
     }
@@ -242,7 +236,7 @@ export default function CreateEvent() {
       }
     } else {
       // Tampilkan pesan error jika form tidak valid
-      alert("Harap lengkapi semua field yang diperlukan sebelum melanjutkan.");
+      alert("Please complete all required fields before continuing.");
     }
   };
 
@@ -603,7 +597,7 @@ export default function CreateEvent() {
                 {/* Submit error message */}
                 {submitError && (
                   <div className="mt-3 p-2 sm:p-3 bg-red-50 border border-red-200 rounded-md">
-                    <h3 className="text-xs sm:text-sm font-medium text-red-800">Error saat membuat event:</h3>
+                    <h3 className="text-xs sm:text-sm font-medium text-red-800">Error when creating event:</h3>
                     <p className="mt-1 text-xs sm:text-sm text-red-700">{submitError}</p>
                   </div>
                 )}

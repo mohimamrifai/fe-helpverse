@@ -97,24 +97,24 @@ export default function MyEventsPage(): React.ReactElement {
       console.log('API response:', response.data);
 
       if (response.data.success) {
-        // Transform data dari API
+        // Transform data from API
         const transformedEvents = response.data.data.map((event: any) => ({
           id: event.id || event._id,
           _id: event._id || event.id,
-          name: event.name || 'Event Tanpa Nama',
-          description: event.description || 'Tidak ada deskripsi',
-          date: event.date ? new Date(event.date).toLocaleDateString('id-ID', {
+          name: event.name || 'Unnamed Event',
+          description: event.description || 'No description',
+          date: event.date ? new Date(event.date).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
             day: 'numeric'
-          }) : 'Tanggal tidak tersedia',
-          time: event.time || 'Waktu tidak tersedia',
-          location: event.location || 'Lokasi tidak tersedia',
+          }) : 'Date not available',
+          time: event.time || 'Time not available',
+          location: event.location || 'Location not available',
           address: event.address || '',
           image: event.image || '/logo-blue.png',
           totalSeats: event.totalSeats || 0,
           availableSeats: event.availableSeats || 0,
-          createdAt: event.createdAt ? new Date(event.createdAt).toLocaleDateString('id-ID') : '-',
+          createdAt: event.createdAt ? new Date(event.createdAt).toLocaleDateString('en-US') : '-',
           published: event.published || false,
           approvalStatus: event.approvalStatus || 'pending',
           tickets: event.tickets || [],
@@ -126,10 +126,10 @@ export default function MyEventsPage(): React.ReactElement {
         setTotalEvents(response.data.count || 0);
         setPagination(response.data.pagination || null);
         
-        // Hitung total halaman berdasarkan total events dan items per halaman
+        // Calculate total pages based on total events and items per page
         setTotalPages(response.data.count ? Math.ceil(response.data.count / limit) : 1);
       } else {
-        throw new Error(response.data.message || 'Gagal mengambil data event');
+        throw new Error(response.data.message || 'Failed to fetch event data');
       }
     } catch (err) {
       console.error('Error fetching events:', err);
@@ -414,25 +414,36 @@ export default function MyEventsPage(): React.ReactElement {
 
                         <div className="mt-4 pt-4 border-t border-secondary">
                           <div className="flex gap-3 justify-end">
-                            <Link
-                              to={`/event/${event.id}`}
-                              className="text-secondary hover:text-white"
-                            >
-                              <FaEye className="w-5 h-5" />
-                            </Link>
-                            <Link
-                              to={`/event/${event.id}/edit`}
-                              className="text-secondary hover:text-white"
-                            >
-                              <FaEdit className="w-5 h-5" />
-                            </Link>
-                            <button
-                              onClick={() => handleDeleteEvent(event.id)}
-                              className="text-secondary hover:text-white"
-                              disabled={deleteLoading === event.id}
-                            >
-                              <FaTrash className="w-5 h-5" />
-                            </button>
+                            <div className="flex">
+                              <Link
+                                to={`/event/${event.id}`}
+                                className="bg-teal-500 text-white p-2 rounded-full mr-2 hover:bg-teal-600 transition duration-300"
+                                title="Lihat Event"
+                              >
+                                <FaEye className="text-sm" />
+                              </Link>
+                              <Link
+                                to={`/event/edit/${event.id}`}
+                                className="bg-blue-500 text-white p-2 rounded-full mr-2 hover:bg-blue-600 transition duration-300"
+                                title="Edit Event"
+                              >
+                                <FaEdit className="text-sm" />
+                              </Link>
+                              <button
+                                onClick={() => handleDeleteEvent(event.id)}
+                                className={`bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition duration-300 ${
+                                  deleteLoading === event.id ? 'opacity-50 cursor-not-allowed' : ''
+                                }`}
+                                disabled={deleteLoading === event.id}
+                                title="Hapus Event"
+                              >
+                                {deleteLoading === event.id ? (
+                                  <div className="h-4 w-4 border-2 border-white border-t-transparent animate-spin rounded-full"></div>
+                                ) : (
+                                  <FaTrash className="text-sm" />
+                                )}
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>

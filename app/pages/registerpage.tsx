@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router';
 import { useRegisterUser } from '../hooks/useAuth';
 import { FaEye, FaEyeSlash, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 
-// Interface untuk modal
+// Interface for modal
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -12,7 +12,7 @@ interface ModalProps {
   status: 'success' | 'error';
 }
 
-// Komponen Modal
+// Modal Component
 function Modal({ isOpen, onClose, title, message, status }: ModalProps) {
   if (!isOpen) return null;
 
@@ -54,7 +54,7 @@ export default function RegisterPage() {
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   
-  // State untuk modal
+  // Modal state
   const [showModal, setShowModal] = useState(false);
   const [modalData, setModalData] = useState({
     title: '',
@@ -87,31 +87,31 @@ export default function RegisterPage() {
     const errors: Record<string, string> = {};
     
     if (!formData.username.trim()) {
-      errors.username = 'Username harus diisi';
+      errors.username = 'Username is required';
     }
     
     if (!formData.fullName.trim()) {
-      errors.fullName = 'Nama lengkap harus diisi';
+      errors.fullName = 'Full name is required';
     }
     
     if (!formData.email.trim()) {
-      errors.email = 'Email harus diisi';
+      errors.email = 'Email is required';
     } else if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
-      errors.email = 'Format email tidak valid';
+      errors.email = 'Invalid email format';
     }
     
     if (!formData.phone.trim()) {
-      errors.phone = 'Nomor telepon harus diisi';
+      errors.phone = 'Phone number is required';
     }
     
     if (!formData.password.trim()) {
-      errors.password = 'Password harus diisi';
+      errors.password = 'Password is required';
     } else if (formData.password.length < 6) {
-      errors.password = 'Password minimal 6 karakter';
+      errors.password = 'Password must be at least 6 characters';
     }
     
     if (!formData.agreeTerms) {
-      errors.agreeTerms = 'Anda harus menyetujui syarat dan ketentuan';
+      errors.agreeTerms = 'You must agree to the terms and conditions';
     }
     
     setFormErrors(errors);
@@ -133,31 +133,31 @@ export default function RegisterPage() {
       
       await register(dataToSubmit);
       
-      // Tampilkan modal sukses
+      // Show success modal
       setModalData({
-        title: 'Pendaftaran Berhasil',
-        message: 'Akun Anda telah berhasil dibuat. Anda akan diarahkan ke halaman login.',
+        title: 'Registration Successful',
+        message: 'Your account has been successfully created. You will be redirected to the login page.',
         status: 'success'
       });
       setShowModal(true);
     } catch (err) {
       console.error('Registration error:', err);
       
-      // Tampilkan modal error
+      // Show error modal
       setModalData({
-        title: 'Pendaftaran Gagal',
-        message: error || 'Terjadi kesalahan saat mendaftarkan akun Anda. Silakan coba lagi.',
+        title: 'Registration Failed',
+        message: error || 'An error occurred while registering your account. Please try again.',
         status: 'error'
       });
       setShowModal(true);
     }
   };
   
-  // Handler untuk menutup modal
+  // Handler to close modal
   const handleCloseModal = () => {
     setShowModal(false);
     
-    // Jika pendaftaran berhasil, arahkan ke halaman login
+    // If registration was successful, redirect to login page
     if (modalData.status === 'success') {
       navigate('/');
     }
@@ -168,8 +168,8 @@ export default function RegisterPage() {
       <div className="w-full max-w-md p-6 space-y-4 bg-white rounded-lg shadow-md">
         <div className="text-center">
           <img src="/logo-blue.png" alt="HELPVerse Logo" className="mx-auto h-16 w-16" />
-          <h1 className="text-2xl font-bold text-primary mt-2">Daftar Akun</h1>
-          <p className="mt-1 text-sm text-gray-600">Buat akun untuk memesan tiket event</p>
+          <h1 className="text-2xl font-bold text-primary mt-2">Create Account</h1>
+          <p className="mt-1 text-sm text-gray-600">Create an account to book event tickets</p>
         </div>
         
         <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
@@ -182,7 +182,7 @@ export default function RegisterPage() {
                 type="text"
                 required
                 className={`mt-1 block w-full px-3 py-2 border ${formErrors.username ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary`}
-                placeholder="Masukkan username Anda"
+                placeholder="Enter your username"
                 value={formData.username}
                 onChange={handleChange}
               />
@@ -192,14 +192,14 @@ export default function RegisterPage() {
             </div>
             
             <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">Nama Lengkap</label>
+              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">Full Name</label>
               <input
                 id="fullName"
                 name="fullName"
                 type="text"
                 required
                 className={`mt-1 block w-full px-3 py-2 border ${formErrors.fullName ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary`}
-                placeholder="Masukkan nama lengkap Anda"
+                placeholder="Enter your full name"
                 value={formData.fullName}
                 onChange={handleChange}
               />
@@ -216,7 +216,7 @@ export default function RegisterPage() {
                 type="email"
                 required
                 className={`mt-1 block w-full px-3 py-2 border ${formErrors.email ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary`}
-                placeholder="Masukkan email Anda"
+                placeholder="Enter your email"
                 value={formData.email}
                 onChange={handleChange}
               />
@@ -226,14 +226,14 @@ export default function RegisterPage() {
             </div>
             
             <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Nomor Telepon</label>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Phone Number</label>
               <input
                 id="phone"
                 name="phone"
                 type="tel"
                 required
                 className={`mt-1 block w-full px-3 py-2 border ${formErrors.phone ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary`}
-                placeholder="Masukkan nomor telepon Anda"
+                placeholder="Enter your phone number"
                 value={formData.phone}
                 onChange={handleChange}
               />
@@ -251,7 +251,7 @@ export default function RegisterPage() {
                   type={showPassword ? "text" : "password"}
                   required
                   className={`mt-1 block w-full px-3 py-2 border ${formErrors.password ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary`}
-                  placeholder="Masukkan password Anda"
+                  placeholder="Enter your password"
                   value={formData.password}
                   onChange={handleChange}
                 />
@@ -285,7 +285,7 @@ export default function RegisterPage() {
               </div>
               <div className="ml-3 text-sm">
                 <label htmlFor="agreeTerms" className="font-medium text-gray-700">
-                  Saya menyetujui <a href="#" className="text-primary hover:underline">Syarat dan Ketentuan</a>
+                  I agree to the <a href="#" className="text-primary hover:underline">Terms and Conditions</a>
                 </label>
                 {formErrors.agreeTerms && (
                   <p className="mt-1 text-sm text-red-600">{formErrors.agreeTerms}</p>
@@ -300,31 +300,31 @@ export default function RegisterPage() {
               disabled={loading}
               className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-70"
             >
-              {loading ? 'Mendaftar...' : 'Daftar'}
+              {loading ? 'Registering...' : 'Register'}
             </button>
           </div>
           
           <div className="text-sm text-center">
             <p className="text-gray-600">
-              Sudah punya akun?{' '}
+              Already have an account?{' '}
               <Link to="/login" className="font-semibold text-primary hover:text-primary/80">
-                Masuk di sini
+                Login here
               </Link>
             </p>
           </div>
           
           <div className="text-sm text-center mt-4 border-t pt-4">
             <p className="text-gray-600">
-              Ingin mendaftar sebagai event organizer?{' '}
+              Want to register as an event organizer?{' '}
               <Link to="/register/event-organizer" className="font-semibold text-primary hover:text-primary/80">
-                Daftar di sini
+                Register here
               </Link>
             </p>
           </div>
         </form>
       </div>
       
-      {/* Modal untuk notifikasi */}
+      {/* Notification Modal */}
       <Modal
         isOpen={showModal}
         onClose={handleCloseModal}

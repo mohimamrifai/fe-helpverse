@@ -293,23 +293,23 @@ export default function MyBookingsPage(): React.ReactElement {
     }
   };
 
-  // Fungsi untuk memeriksa apakah tanggal acara kurang dari 7 hari dari sekarang
+  // Function to check if event date is less than 7 days from now
   const isLessThan7DaysBeforeEvent = (eventDateStr: string): boolean => {
     try {
-      // Jika format tanggal dari API adalah timestamp atau ISO string, gunakan Date.parse
-      // Mencoba parsing dengan Date.parse terlebih dahulu
+      // If date format from API is a timestamp or ISO string, use Date.parse
+      // Try parsing with Date.parse first
       let eventDate = new Date(Date.parse(eventDateStr));
       
-      // Jika parsing tidak valid, coba dengan pendekatan manual
+      // If parsing is not valid, try with manual approach
       if (isNaN(eventDate.getTime())) {
-        // Coba mendeteksi format yang umum untuk tanggal
-        // Format yang mungkin: "10 Agustus 2025", "August 10, 2025", etc.
+        // Try to detect common date formats
+        // Possible formats: "10 August 2025", "August 10, 2025", etc.
         
-        // Coba untuk format "DD Month YYYY"
+        // Try for format "DD Month YYYY"
         const datePattern1 = /(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/;
         const match1 = eventDateStr.match(datePattern1);
         
-        // Coba untuk format "Month DD, YYYY"
+        // Try for format "Month DD, YYYY"
         const datePattern2 = /([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})/;
         const match2 = eventDateStr.match(datePattern2);
         
@@ -318,7 +318,7 @@ export default function MyBookingsPage(): React.ReactElement {
           const monthName = match1[2];
           const year = parseInt(match1[3]);
           
-          // Mapping nama bulan ke indeks
+          // Mapping month names to indices
           const monthIndex = getMonthIndex(monthName);
           if (monthIndex !== -1) {
             eventDate = new Date(year, monthIndex, day);
@@ -328,7 +328,7 @@ export default function MyBookingsPage(): React.ReactElement {
           const day = parseInt(match2[2]);
           const year = parseInt(match2[3]);
           
-          // Mapping nama bulan ke indeks
+          // Mapping month names to indices
           const monthIndex = getMonthIndex(monthName);
           if (monthIndex !== -1) {
             eventDate = new Date(year, monthIndex, day);
@@ -336,7 +336,7 @@ export default function MyBookingsPage(): React.ReactElement {
         }
       }
       
-      // Jika tanggal masih tidak valid, return false
+      // If date is still not valid, return false
       if (isNaN(eventDate.getTime())) {
         console.error('Invalid date after parsing:', eventDateStr);
         return false;
@@ -344,18 +344,18 @@ export default function MyBookingsPage(): React.ReactElement {
       
       const today = new Date();
       
-      // Hitung selisih hari
+      // Calculate day difference
       const diffTime = eventDate.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       
       return diffDays < 7;
     } catch (error) {
       console.error('Error parsing date:', error);
-      return false; // Default ke false jika ada error
+      return false; // Default to false if there's an error
     }
   };
   
-  // Fungsi helper untuk mendapatkan indeks bulan dari nama bulan
+  // Helper function to get month index from month name
   const getMonthIndex = (monthName: string): number => {
     const monthsID = ['januari', 'februari', 'maret', 'april', 'mei', 'juni', 'juli', 'agustus', 'september', 'oktober', 'november', 'desember'];
     const monthsEN = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];

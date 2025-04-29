@@ -337,69 +337,69 @@ const EventForm = ({ existingEvent = null }) => {
 
 ## API Endpoints
 
-### Autentikasi
-- `POST /api/auth/register` - Registrasi pengguna baru
-- `POST /api/auth/register/event-organizer` - Registrasi sebagai event organizer
-- `POST /api/auth/login` - Login pengguna (menggunakan username atau email)
-- `GET /api/auth/logout` - Logout pengguna
-- `GET /api/auth/me` - Mendapatkan profil pengguna saat ini
+### Authentication
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/register/event-organizer` - Register as event organizer
+- `POST /api/auth/login` - User login (using username or email)
+- `GET /api/auth/logout` - User logout
+- `GET /api/auth/me` - Get current user profile
 
 ### Event
-- `GET /api/events` - Mendapatkan semua event yang sudah dipublikasikan dengan pagination & filtering
-- `GET /api/events/:id` - Mendapatkan informasi detail event
-- `POST /api/events` - Membuat event baru dengan upload gambar (Event Organizer/Admin)
-- `PUT /api/events/:id` - Memperbarui event dan gambar (Owner/Admin)
-- `DELETE /api/events/:id` - Menghapus event (Owner/Admin)
+- `GET /api/events` - Get all published events with pagination & filtering
+- `GET /api/events/:id` - Get event detail information
+- `POST /api/events` - Create new event with image upload (Event Organizer/Admin)
+- `PUT /api/events/:id` - Update event and image (Owner/Admin)
+- `DELETE /api/events/:id` - Delete event (Owner/Admin)
 
 ### Waiting List
-- `POST /api/waiting-list` - Mendaftar ke waiting list event (Public)
-- `GET /api/waiting-list` - Mendapatkan daftar waiting list user berdasarkan email (Public)
-- `DELETE /api/waiting-list/:id` - Menghapus waiting list user berdasarkan ID (Public, dengan verifikasi email)
-- `GET /api/waiting-list/admin` - Mendapatkan semua data waiting list (Admin)
-- `GET /api/waiting-list/admin/:id` - Mendapatkan detail waiting list berdasarkan ID (Admin)
-- `PUT /api/waiting-list/admin/:id` - Memperbarui status waiting list (Admin)
-- `DELETE /api/waiting-list/admin/:id` - Menghapus entri waiting list (Admin)
+- `POST /api/waiting-list` - Register to event waiting list (Public)
+- `GET /api/waiting-list` - Get user's waiting list based on email (Public)
+- `DELETE /api/waiting-list/:id` - Delete user's waiting list based on ID (Public, with email verification)
+- `GET /api/waiting-list/admin` - Get all waiting list data (Admin)
+- `GET /api/waiting-list/admin/:id` - Get waiting list detail based on ID (Admin)
+- `PUT /api/waiting-list/admin/:id` - Update waiting list status (Admin)
+- `DELETE /api/waiting-list/admin/:id` - Delete waiting list entry (Admin)
 
-### Tiket
-- `GET /api/events/:id/tickets` - Mendapatkan tiket yang tersedia untuk event
-- `GET /api/events/:id/tickets/:ticketId/seats` - Mendapatkan ketersediaan kursi
+### Tickets
+- `GET /api/events/:id/tickets` - Get available tickets for an event
+- `GET /api/events/:id/tickets/:ticketId/seats` - Get seat availability
 
-### Pemesanan
-- `POST /api/orders` - Membuat pemesanan baru
-- `GET /api/orders` - Mendapatkan pemesanan pengguna
-- `GET /api/orders/:id` - Mendapatkan detail pemesanan
-- `PUT /api/orders/:id/cancel` - Membatalkan pemesanan
+### Orders
+- `POST /api/orders` - Create new order
+- `GET /api/orders` - Get user's orders
+- `GET /api/orders/:id` - Get order details
+- `PUT /api/orders/:id/cancel` - Cancel an order
 
-#### Format Request Pemesanan
-Untuk membuat pemesanan baru, gunakan format JSON berikut:
+#### Order Request Format
+To create a new order, use the following JSON format:
 
 ```javascript
 const orderPayload = {
-  "eventId": "60a1b2c3d4e5f6g7h8i9j0k1",  // ID event yang akan dipesan
+  "eventId": "60a1b2c3d4e5f6g7h8i9j0k1",  // ID of the event to order
   "tickets": [
     {
-      "ticketType": "VIP",        // Nama jenis tiket yang tersedia di event
-      "quantity": 2,              // Jumlah tiket yang dipesan
-      "seats": [                  // Array kursi yang dipilih
+      "ticketType": "VIP",        // Name of ticket type available in the event
+      "quantity": 2,              // Number of tickets ordered
+      "seats": [                  // Array of selected seats
         {
-          "row": 1,               // Nomor baris kursi
-          "column": 5             // Nomor kolom kursi
+          "row": 1,               // Row number
+          "column": 5             // Column number
         },
         {
-          "row": 1,               // Nomor baris kursi
-          "column": 6             // Nomor kolom kursi
+          "row": 1,               // Row number
+          "column": 6             // Column number
         }
       ]
     }
   ],
-  "promoCode": "EARLYBIRD",       // Kode promo (opsional)
-  "paymentInfo": {                // Informasi pembayaran (wajib)
-    "method": "credit_card",      // Metode pembayaran
-    "transactionId": "txn_12345"  // ID transaksi pembayaran
+  "promoCode": "EARLYBIRD",       // Promo code (optional)
+  "paymentInfo": {                // Payment information (required)
+    "method": "credit_card",      // Payment method
+    "transactionId": "txn_12345"  // Payment transaction ID
   }
 };
 
-// Contoh pemanggilan API pemesanan
+// Example of order API call
 const createOrder = async (orderData) => {
   try {
     const response = await fetch('/api/orders', {
@@ -417,7 +417,7 @@ const createOrder = async (orderData) => {
     }
     
     const result = await response.json();
-    return result.data; // Data pemesanan yang berhasil dibuat
+    return result.data; // Successfully created order data
   } catch (error) {
     console.error('Error creating order:', error);
     throw error;
@@ -425,18 +425,18 @@ const createOrder = async (orderData) => {
 };
 ```
 
-#### Catatan tentang harga tiket:
-Server secara otomatis mengambil harga tiket dari database berdasarkan `ticketType` yang dikirimkan. Anda tidak perlu mengirim harga tiket dalam request. Ini memastikan bahwa harga yang digunakan adalah harga yang akurat dan terkini dari server.
+#### Notes about ticket prices:
+The server automatically retrieves ticket prices from the database based on the submitted `ticketType`. You don't need to send ticket prices in the request. This ensures that the prices used are accurate and up-to-date from the server.
 
-#### Validasi yang dilakukan server:
-1. Event harus ada dan valid
-2. Tiket yang dipilih harus tersedia di event
-3. Jumlah kursi yang dipilih harus sama dengan quantity
-4. Kursi yang dipilih harus tersedia (belum dipesan)
-5. Kode promo harus valid dan masih berlaku jika disertakan
-6. Informasi pembayaran harus disertakan
+#### Server-side validations:
+1. Event must exist and be valid
+2. Selected tickets must be available in the event
+3. Number of selected seats must match the quantity
+4. Selected seats must be available (not already booked)
+5. Promo code must be valid and still applicable if included
+6. Payment information must be included
 
-#### Response Success (201 Created)
+#### Success Response (201 Created)
 ```json
 {
   "success": true,
@@ -446,7 +446,7 @@ Server secara otomatis mengambil harga tiket dari database berdasarkan `ticketTy
     "event": {
       "_id": "event_id_here",
       "name": "Tech Conference 2025",
-      // ...data event lainnya
+      // ...other event data
     },
     "tickets": [
       {
@@ -475,21 +475,21 @@ Server secara otomatis mengambil harga tiket dari database berdasarkan `ticketTy
 ```
 
 ### Admin
-- `GET /api/admin/events` - Mendapatkan semua event (termasuk yang belum dipublikasikan)
-- `GET /api/admin/users` - Mendapatkan semua pengguna
-- `GET /api/admin/orders` - Mendapatkan semua pemesanan
+- `GET /api/admin/events` - Get all events (including unpublished ones)
+- `GET /api/admin/users` - Get all users
+- `GET /api/admin/orders` - Get all orders
 
 ## Struktur Data
 
 ### User
 ```typescript
 {
-  username: string;         // Username unik
-  email: string;            // Alamat email unik
-  password: string;         // Password yang sudah di-hash
-  fullName: string;         // Nama lengkap pengguna
-  phone: string;            // Nomor kontak
-  organizerName?: string;   // Wajib untuk event organizer
+  username: string;         // Unique username
+  email: string;            // Unique email address
+  password: string;         // Hashed password
+  fullName: string;         // User's full name
+  phone: string;            // Contact number
+  organizerName?: string;   // Required for event organizers
   role: "user" | "eventOrganizer" | "admin";
   createdAt: Date;
   updatedAt: Date;
@@ -754,28 +754,28 @@ const updateWaitingListStatus = async (waitingListId, updateData) => {
   }
 };
 
-// Contoh penggunaan:
+// Example usage:
 const approveWaitingList = async (waitingListId) => {
   try {
     const updateData = {
-      status: "approved", // bisa berupa: "pending", "approved", "rejected"
-      notes: "Diterima dengan syarat membayar DP dalam 3 hari" // Opsional
+      status: "approved", // can be: "pending", "approved", "rejected"
+      notes: "Accepted with condition to pay deposit within 3 days" // Optional
     };
     
     const result = await updateWaitingListStatus(waitingListId, updateData);
-    console.log('Status waiting list berhasil diperbarui:', result);
+    console.log('Waiting list status successfully updated:', result);
     
-    // Refresh data waiting list
+    // Refresh waiting list data
     // fetchWaitingList();
   } catch (error) {
-    console.error('Gagal memperbarui status waiting list:', error);
+    console.error('Failed to update waiting list status:', error);
   }
 };
 ```
 
-### Contoh Pembentukan Pemesanan:
+### Example of Order Creation:
 ```javascript
-// Membuat pemesanan baru
+// Create new order
 const createOrder = async (orderData) => {
   try {
     const response = await fetch('/api/orders', {
@@ -801,16 +801,16 @@ const createOrder = async (orderData) => {
 
 ## Autentikasi & Keamanan
 
-### Format Data Login:
-#### Format Baru (Menggunakan identifier - username atau email):
+### Login Data Format:
+#### New Format (Using identifier - username or email):
 ```json
 {
-  "identifier": "username_atau_email@example.com",
+  "identifier": "username_or_email@example.com",
   "password": "password123"
 }
 ```
 
-#### Format Lama (Menggunakan email - tetap didukung untuk kompatibilitas):
+#### Old Format (Using email - still supported for compatibility):
 ```json
 {
   "email": "email@example.com",
@@ -826,9 +826,7 @@ const createOrder = async (orderData) => {
 }
 ```
 
-### Contoh Implementasi Login:
-```javascript
-// Login dengan identifier (username atau email)
+### Login with identifier (username or email)
 const loginWithIdentifier = async (identifier, password) => {
   try {
     const response = await fetch('/api/auth/login', {
@@ -843,12 +841,12 @@ const loginWithIdentifier = async (identifier, password) => {
     });
     
     if (!response.ok) {
-      throw new Error('Gagal login');
+      throw new Error('Login failed');
     }
     
     const data = await response.json();
     
-    // Simpan token di localStorage
+    // Save token in localStorage
     localStorage.setItem('token', data.token);
     
     return data;
@@ -858,7 +856,7 @@ const loginWithIdentifier = async (identifier, password) => {
   }
 };
 
-// Login dengan email (untuk kompatibilitas)
+// Login with email (for compatibility)
 const loginWithEmail = async (email, password) => {
   try {
     const response = await fetch('/api/auth/login', {
@@ -873,12 +871,12 @@ const loginWithEmail = async (email, password) => {
     });
     
     if (!response.ok) {
-      throw new Error('Gagal login');
+      throw new Error('Login failed');
     }
     
     const data = await response.json();
     
-    // Simpan token di localStorage
+    // Save token in localStorage
     localStorage.setItem('token', data.token);
     
     return data;
@@ -887,11 +885,10 @@ const loginWithEmail = async (email, password) => {
     throw error;
   }
 };
-```
 
-### Contoh Implementasi Mengubah Password:
+### Example of Password Change Implementation:
 ```javascript
-// Mengubah password pengguna
+// Change user password
 const changePassword = async (currentPassword, newPassword) => {
   try {
     const response = await fetch('/api/auth/change-password', {
@@ -908,12 +905,12 @@ const changePassword = async (currentPassword, newPassword) => {
     
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || 'Gagal mengubah password');
+      throw new Error(errorData.error || 'Failed to change password');
     }
     
     const data = await response.json();
     
-    // Update token jika ada token baru yang diberikan
+    // Update token if a new token is provided
     if (data.token) {
       localStorage.setItem('token', data.token);
     }
@@ -925,190 +922,28 @@ const changePassword = async (currentPassword, newPassword) => {
   }
 };
 
-// Contoh penggunaan:
+// Example usage:
 const handleChangePassword = async (currentPassword, newPassword) => {
   try {
     const result = await changePassword(currentPassword, newPassword);
     
     if (result.success) {
-      console.log('Password berhasil diubah');
-      // Tampilkan pesan sukses ke pengguna
+      console.log('Password successfully changed');
+      // Show success message to user
     }
   } catch (error) {
-    console.error('Gagal mengubah password:', error);
-    // Tampilkan pesan error ke pengguna
+    console.error('Failed to change password:', error);
+    // Show error message to user
   }
 };
 ```
 
-#### Format Request:
+#### Request Format:
 ```json
 {
-  "currentPassword": "password_lama",
-  "newPassword": "password_baru"
+  "currentPassword": "old_password",
+  "newPassword": "new_password"
 }
-```
-
-#### Response Success (200 OK):
-```json
-{
-  "success": true,
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
-```
-
-#### Kemungkinan Error Response:
-1. **Current password salah (401 Unauthorized)**:
-   ```json
-   {
-     "success": false,
-     "error": "Current password is incorrect"
-   }
-   ```
-
-2. **Password baru terlalu pendek (400 Bad Request)**:
-   ```json
-   {
-     "success": false,
-     "error": "New password must be at least 6 characters"
-   }
-   ```
-
-3. **Input tidak lengkap (400 Bad Request)**:
-   ```json
-   {
-     "success": false,
-     "error": "Please provide current password and new password"
-   }
-   ```
-
-4. **User tidak ditemukan (404 Not Found)**:
-   ```json
-   {
-     "success": false,
-     "error": "User not found"
-   }
-   ```
-
-5. **Kesalahan validasi (400 Bad Request)**:
-   ```json
-   {
-     "success": false,
-     "error": ["Password saat ini tidak boleh kosong", "Password baru harus minimal 6 karakter"]
-   }
-   ```
-
-#### Implementasi Form Ubah Password:
-```jsx
-import { useState } from 'react';
-
-const ChangePasswordForm = () => {
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const validateForm = () => {
-    if (!currentPassword) {
-      setError('Password saat ini tidak boleh kosong');
-      return false;
-    }
-    if (!newPassword) {
-      setError('Password baru tidak boleh kosong');
-      return false;
-    }
-    if (newPassword.length < 6) {
-      setError('Password baru harus minimal 6 karakter');
-      return false;
-    }
-    if (newPassword !== confirmPassword) {
-      setError('Password baru dan konfirmasi password tidak sama');
-      return false;
-    }
-    return true;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    
-    if (!validateForm()) {
-      return;
-    }
-    
-    setLoading(true);
-    try {
-      const result = await changePassword(currentPassword, newPassword);
-      
-      if (result.success) {
-        setSuccess('Password berhasil diubah');
-        // Reset form fields
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-      }
-    } catch (error) {
-      setError(error.message || 'Gagal mengubah password');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <h2>Ubah Password</h2>
-      
-      {error && <div className="error-message">{error}</div>}
-      {success && <div className="success-message">{success}</div>}
-      
-      <div className="form-group">
-        <label htmlFor="currentPassword">Password Saat Ini</label>
-        <input
-          type="password"
-          id="currentPassword"
-          value={currentPassword}
-          onChange={(e) => setCurrentPassword(e.target.value)}
-          disabled={loading}
-          required
-        />
-      </div>
-      
-      <div className="form-group">
-        <label htmlFor="newPassword">Password Baru</label>
-        <input
-          type="password"
-          id="newPassword"
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-          disabled={loading}
-          required
-          minLength={6}
-        />
-      </div>
-      
-      <div className="form-group">
-        <label htmlFor="confirmPassword">Konfirmasi Password Baru</label>
-        <input
-          type="password"
-          id="confirmPassword"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          disabled={loading}
-          required
-        />
-      </div>
-      
-      <button type="submit" disabled={loading}>
-        {loading ? 'Memproses...' : 'Ubah Password'}
-      </button>
-    </form>
-  );
-};
-
-export default ChangePasswordForm;
 ```
 
 ### Flow Autentikasi:
@@ -1178,12 +1013,12 @@ const fetchUserWaitingList = async () => {
   "data": [
     {
       "_id": "waiting_list_id_1",
-      "name": "Nama Lengkap",
+      "name": "Full Name",
       "email": "email@example.com",
       "event": {
         "_id": "event_id_1",
         "title": "Tech Conference 2025",
-        "description": "Konferensi teknologi tahunan yang membahas tren terbaru dalam pengembangan perangkat lunak dan hardware",
+        "description": "Annual technology conference discussing the latest trends in software and hardware development",
         "date": "2025-03-15T00:00:00.000Z",
         "time": "09:00 - 17:00",
         "location": "Jakarta Convention Center",
@@ -1215,12 +1050,12 @@ const fetchUserWaitingList = async () => {
     },
     {
       "_id": "waiting_list_id_2",
-      "name": "Nama Lengkap",
+      "name": "Full Name",
       "email": "email@example.com",
       "event": {
         "_id": "event_id_2",
         "title": "Music Festival 2025",
-        "description": "Festival musik terbesar di Indonesia dengan menampilkan artis-artis ternama",
+        "description": "Indonesia's biggest music festival featuring renowned artists",
         "date": "2025-04-20T00:00:00.000Z",
         "time": "14:00 - 23:00",
         "location": "Gelora Bung Karno",
@@ -1346,60 +1181,60 @@ const deleteWaitingList = async () => {
     const email = 'user1@example.com';
     
     const response = await axios.delete(`/api/waiting-list/${waitingListId}`, {
-      data: { email }  // Axios menggunakan property 'data' untuk body pada request DELETE
+      data: { email }  // Axios uses 'data' property for request body in DELETE requests
     });
     
-    console.log('Waiting list berhasil dihapus:', response.data);
+    console.log('Waiting list successfully deleted:', response.data);
     
-    // Lakukan sesuatu setelah berhasil menghapus
-    alert('Pendaftaran waiting list berhasil dibatalkan!');
+    // Do something after successful deletion
+    alert('Waiting list registration successfully canceled!');
   } catch (error) {
     console.error('Error:', error.response?.data?.error || error.message);
-    alert(`Gagal membatalkan pendaftaran: ${error.response?.data?.error || error.message}`);
+    alert(`Failed to cancel registration: ${error.response?.data?.error || error.message}`);
   }
 };
 ```
 
 #### Respons Error:
 
-1. **Waiting list tidak ditemukan atau email tidak sesuai (404 Not Found)**:
+1. **Waiting list not found or email doesn't match (404 Not Found)**:
    ```json
    {
      "success": false,
-     "error": "Data waiting list tidak ditemukan atau email tidak sesuai"
+     "error": "Waiting list data not found or email doesn't match"
    }
    ```
 
-2. **Email tidak disertakan (400 Bad Request)**:
+2. **Email not provided (400 Bad Request)**:
    ```json
    {
      "success": false,
-     "error": "Email diperlukan untuk verifikasi"
+     "error": "Email is required for verification"
    }
    ```
 
-3. **Format email tidak valid (400 Bad Request)**:
+3. **Invalid email format (400 Bad Request)**:
    ```json
    {
      "success": false,
-     "error": ["Email tidak valid"]
+     "error": ["Invalid email"]
    }
    ```
 
-### Mendapatkan Semua Event (dengan filter, pencarian, dll)
+### Getting All Events (with filters, search, etc.)
 
 ```
 GET /api/events
 ```
 
-Mendapatkan daftar semua event yang telah dipublikasikan.
+Get a list of all published events.
 
-**Parameter Query (opsional):**
-- `search`: string - mencari berdasarkan nama, deskripsi, lokasi, atau tag
-- `select`: string - memilih field yang akan dikembalikan, dipisahkan dengan koma
-- `sort`: string - mengurutkan berdasarkan field tertentu, dipisahkan dengan koma
-- `page`: number - nomor halaman untuk pagination
-- `limit`: number - jumlah data per halaman
+**Query Parameters (optional):**
+- `search`: string - search by name, description, location, or tags
+- `select`: string - select fields to return, separated by commas
+- `sort`: string - sort by specific fields, separated by commas
+- `page`: number - page number for pagination
+- `limit`: number - number of data per page
 
 **Response:**
 
@@ -1417,35 +1252,35 @@ Mendapatkan daftar semua event yang telah dipublikasikan.
     {
       "_id": "60d21b4667d0d8992e610c85",
       "name": "Tech Conference 2023",
-      "description": "Conference tahunan membahas teknologi terbaru",
+      "description": "Annual conference discussing the latest technology",
       "date": "2023-08-15T00:00:00.000Z",
       "time": "09:00",
       "location": "Kuala Lumpur Convention Center",
       "price": 100.00,
-      // ...fields lainnya
+      // ...other fields
     }
   ]
 }
 ```
 
-### Mendapatkan Event Milik Event Organizer yang Login
+### Getting Events Owned by the Logged-in Event Organizer
 
 ```
 GET /api/events/my-events
 ```
 
-Mendapatkan daftar semua event yang dibuat oleh event organizer yang sedang login.
+Get a list of all events created by the currently logged-in event organizer.
 
 **Header:**
 - `Authorization`: Bearer [token]
 
-**Parameter Query (opsional):**
-- `search`: string - mencari berdasarkan nama, deskripsi, lokasi, atau tag
-- `select`: string - memilih field yang akan dikembalikan, dipisahkan dengan koma
-- `sort`: string - mengurutkan berdasarkan field tertentu, dipisahkan dengan koma
-- `page`: number - nomor halaman untuk pagination
-- `limit`: number - jumlah data per halaman
-- Filter lain seperti `published=true`, `approvalStatus=approved`, dll.
+**Query Parameters (optional):**
+- `search`: string - search by name, description, location, or tags
+- `select`: string - select fields to return, separated by commas
+- `sort`: string - sort by specific fields, separated by commas
+- `page`: number - page number for pagination
+- `limit`: number - number of data per page
+- Other filters like `published=true`, `approvalStatus=approved`, etc.
 
 **Response:**
 
@@ -1463,7 +1298,7 @@ Mendapatkan daftar semua event yang dibuat oleh event organizer yang sedang logi
     {
       "_id": "60d21b4667d0d8992e610c85",
       "name": "Tech Conference 2023",
-      "description": "Conference tahunan membahas teknologi terbaru",
+      "description": "Annual conference discussing the latest technology",
       "date": "2023-08-15T00:00:00.000Z",
       "time": "09:00",
       "location": "Kuala Lumpur Convention Center",
@@ -1475,13 +1310,13 @@ Mendapatkan daftar semua event yang dibuat oleh event organizer yang sedang logi
         "fullName": "Organizer One",
         "organizerName": "Premier Events"
       },
-      // ...fields lainnya
+      // ...other fields
     }
   ]
 }
 ```
 
-### Mendapatkan Detail Event
+### Getting Event Details
 
 ```
 GET /api/events/:id

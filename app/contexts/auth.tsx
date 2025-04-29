@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fungsi untuk refresh data user dari server
+  // Function for refreshing user data from server
   const refreshUserData = async (): Promise<User> => {
     try {
       console.log('Refreshing user data...');
@@ -112,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Fungsi untuk registrasi pengguna biasa
+  // Function for registering regular users
   const registerUser = async (data: {
     username: string;
     fullName: string;

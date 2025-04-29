@@ -63,10 +63,10 @@ export function PromotionalOffersStep({
       <div>
         <h2 className="text-base sm:text-lg font-semibold text-gray-900 flex items-center">
           <FaTicketAlt className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-gray-400" />
-          Penawaran Promosi (Opsional)
+          Promotional Offers (Optional)
         </h2>
         <p className="mt-1 text-sm text-gray-500">
-          Tambahkan kode promo untuk acara Anda untuk meningkatkan penjualan.
+          Add promo codes for your event to increase sales.
         </p>
         
         {/* List of Existing Promos */}
@@ -89,11 +89,11 @@ export function PromotionalOffersStep({
               
               <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="bg-gray-50 rounded p-2 text-xs sm:text-sm overflow-hidden">
-                  <span className="font-medium">Kode: </span>
+                  <span className="font-medium">Code: </span>
                   <span className="font-mono text-indigo-600 break-all">{promo.code}</span>
                 </div>
                 <div className="bg-gray-50 rounded p-2 text-xs sm:text-sm">
-                  <span className="font-medium">Diskon: </span>
+                  <span className="font-medium">Discount: </span>
                   <span>
                     {promo.discountValue}{promo.discountType === 'percentage' ? '%' : ' RM'}
                   </span>
@@ -103,23 +103,23 @@ export function PromotionalOffersStep({
               <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div className="text-xs text-gray-500 flex items-center">
                   <FaCalendarAlt className="w-3 h-3 mr-1 flex-shrink-0" />
-                  <span className="truncate">Dari: {new Date(promo.validFrom).toLocaleDateString()}</span>
+                  <span className="truncate">From: {new Date(promo.validFrom).toLocaleDateString()}</span>
                 </div>
                 <div className="text-xs text-gray-500 flex items-center">
                   <FaCalendarAlt className="w-3 h-3 mr-1 flex-shrink-0" />
-                  <span className="truncate">Sampai: {new Date(promo.validUntil).toLocaleDateString()}</span>
+                  <span className="truncate">To: {new Date(promo.validUntil).toLocaleDateString()}</span>
                 </div>
               </div>
               
               <div className="mt-2 text-xs text-gray-500">
-                <span>Batas penggunaan: {promo.maxUses}</span>
+                <span>Usage limit: {promo.maxUses}</span>
               </div>
             </div>
           ))}
           
           {promotionalOffers.length === 0 && !showAddPromoForm && (
             <div className="bg-gray-50 rounded-lg border border-gray-200 p-4 text-center text-sm text-gray-500">
-              Belum ada penawaran promosi. Tambahkan promo untuk meningkatkan penjualan tiket.
+              No promotional offers yet. Add promos to increase ticket sales.
             </div>
           )}
         </div>
@@ -132,15 +132,15 @@ export function PromotionalOffersStep({
             className="mt-4 inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200 w-full sm:w-auto justify-center"
           >
             <FaPlus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-            Tambah Promo Baru
+            Add New Promo
           </button>
         ) : (
           <div className="mt-4 bg-white rounded-lg border border-gray-200 p-3 sm:p-4 shadow-sm w-full">
-            <h3 className="font-medium text-gray-900 mb-3">Tambah Promo Baru</h3>
+            <h3 className="font-medium text-gray-900 mb-3">Add New Promo</h3>
             <form onSubmit={handleSubmitPromo} className="space-y-3">
               <div>
                 <label htmlFor="promoName" className="block text-sm font-medium text-gray-700">
-                  Nama Promo <span className="text-red-500">*</span>
+                  Promo Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -148,28 +148,28 @@ export function PromotionalOffersStep({
                   value={newPromo.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="contoh: Early Bird"
+                  placeholder="example: Early Bird"
                   required
                 />
               </div>
               
               <div>
                 <label htmlFor="promoDescription" className="block text-sm font-medium text-gray-700">
-                  Deskripsi
+                  Description
                 </label>
                 <textarea
                   id="promoDescription"
                   value={newPromo.description}
                   onChange={(e) => handleInputChange('description', e.target.value)}
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="Jelaskan syarat dan ketentuan promo"
+                  placeholder="Explain promo terms and conditions"
                   rows={2}
                 />
               </div>
               
               <div>
                 <label htmlFor="promoCode" className="block text-sm font-medium text-gray-700">
-                  Kode Promo <span className="text-red-500">*</span>
+                  Promo Code <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -185,7 +185,7 @@ export function PromotionalOffersStep({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label htmlFor="discountType" className="block text-sm font-medium text-gray-700">
-                    Tipe Diskon <span className="text-red-500">*</span>
+                    Discount Type <span className="text-red-500">*</span>
                   </label>
                   <div className="mt-1 flex rounded-md shadow-sm">
                     <div className="relative flex items-stretch flex-grow focus-within:z-10">
@@ -195,8 +195,8 @@ export function PromotionalOffersStep({
                         onChange={(e) => handleInputChange('discountType', e.target.value)}
                         className="block w-full rounded-md border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                       >
-                        <option value="percentage">Persentase (%)</option>
-                        <option value="fixed">Nilai Tetap (RM)</option>
+                        <option value="percentage">Percentage (%)</option>
+                        <option value="fixed">Fixed Amount (RM)</option>
                       </select>
                     </div>
                   </div>
@@ -204,7 +204,7 @@ export function PromotionalOffersStep({
                 
                 <div>
                   <label htmlFor="discountValue" className="block text-sm font-medium text-gray-700">
-                    Nilai Diskon <span className="text-red-500">*</span>
+                    Discount Value <span className="text-red-500">*</span>
                   </label>
                   <div className="mt-1 relative rounded-md shadow-sm">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -238,7 +238,7 @@ export function PromotionalOffersStep({
               <div className="grid grid-cols-1 gap-3">
                 <div>
                   <label htmlFor="validFrom" className="block text-sm font-medium text-gray-700">
-                    Berlaku Dari <span className="text-red-500">*</span>
+                    Valid From <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
@@ -252,7 +252,7 @@ export function PromotionalOffersStep({
                 
                 <div>
                   <label htmlFor="validUntil" className="block text-sm font-medium text-gray-700">
-                    Berlaku Hingga <span className="text-red-500">*</span>
+                    Valid Until <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
@@ -267,7 +267,7 @@ export function PromotionalOffersStep({
               
               <div>
                 <label htmlFor="maxUses" className="block text-sm font-medium text-gray-700">
-                  Batas Penggunaan <span className="text-red-500">*</span>
+                  Usage Limit <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -286,14 +286,14 @@ export function PromotionalOffersStep({
                   type="submit"
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 justify-center"
                 >
-                  Simpan Promo
+                  Save Promo
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowAddPromoForm(false)}
                   className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 justify-center"
                 >
-                  Batal
+                  Cancel
                 </button>
               </div>
             </form>
