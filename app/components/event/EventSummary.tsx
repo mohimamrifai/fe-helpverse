@@ -205,7 +205,6 @@ export default function EventSummary({
           </Link>
 
           <p className='text-xs text-red-500 mt-1'>
-            {isRegularUser ? 'Please login to book tickets' : ''}
             {isEventOrganizer ? 'Your role is event organizer, you can\'t book tickets' : ''}
             {isAdmin ? 'Your role is admin, you can\'t book tickets' : ''}
           </p>
