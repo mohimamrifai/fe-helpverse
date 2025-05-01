@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { FaSearch, FaUserCircle } from "react-icons/fa";
 import { useState, useRef, useEffect } from "react";
 import { Logo } from "./logo";
@@ -38,6 +38,7 @@ export function Navbar() {
     const [showDropdown, setShowDropdown] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const navigate = useNavigate();
 
     const roleLinks = user?.role && linksByRole[user.role as keyof typeof linksByRole] 
         ? linksByRole[user.role as keyof typeof linksByRole] 
@@ -59,6 +60,7 @@ export function Navbar() {
     const handleLogout = () => {
         logout();
         setShowDropdown(false);
+        navigate("/");
     };
 
     return (
