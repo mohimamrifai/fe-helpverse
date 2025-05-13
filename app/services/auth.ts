@@ -262,14 +262,20 @@ export const authService = {
   async logout(): Promise<void> {
     try {
       await api.get('/api/auth/logout');
-      localStorage.removeItem('token');
-      localStorage.removeItem('userData');
+      this.clearStoredAuthData();
     } catch (error) {
       console.error('Logout error:', error);
       // Tetap hapus token meskipun API error
-      localStorage.removeItem('token');
-      localStorage.removeItem('userData');
+      this.clearStoredAuthData();
     }
+  },
+
+  // Fungsi untuk menghapus semua data autentikasi yang tersimpan
+  clearStoredAuthData(): void {
+    console.log('Clearing all stored authentication data');
+    localStorage.removeItem('token');
+    localStorage.removeItem('userData');
+    // Tambahkan item lain terkait auth jika ada
   },
 
   // Function to check if user is authenticated

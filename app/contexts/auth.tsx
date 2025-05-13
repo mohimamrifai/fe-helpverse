@@ -49,6 +49,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error('Error refreshing user data:', err);
       setError(err instanceof Error ? err.message : 'Failed to refresh user data');
+      // Bersihkan user jika gagal memperbarui data
+      setUser(null);
+      authService.clearStoredAuthData();
       throw err;
     } finally {
       setLoading(false);
@@ -68,25 +71,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } catch (fetchErr) {
             console.error('Error fetching user data:', fetchErr);
             
-            // Mencoba membaca dari localStorage sebagai fallback
-            const storedUserData = localStorage.getItem('userData');
-            if (storedUserData) {
-              try {
-                console.log('Using cached user data');
-                const parsedUserData = JSON.parse(storedUserData) as User;
-                setUser(parsedUserData);
-              } catch (parseErr) {
-                console.error('Error parsing stored user data:', parseErr);
-                setError('Failed to load user data');
-              }
-            } else {
-              setError('Failed to fetch user data');
-            }
+            // Jika gagal memvalidasi token, anggap user tidak terautentikasi
+            // dan hapus token serta data user yang tersimpan
+            console.log('Validation failed, clearing user data and token');
+            setUser(null);
+            authService.clearStoredAuthData();
+            setError('Session expired. Please login again.');
           }
         }
       } catch (err) {
         console.error('Auth initialization error:', err);
         setError(err instanceof Error ? err.message : 'An error occurred');
+        // Bersihkan user jika terjadi error
+        setUser(null);
+        authService.clearStoredAuthData();
       } finally {
         setLoading(false);
       }
