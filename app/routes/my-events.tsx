@@ -6,6 +6,8 @@ import { Footer } from '~/components/footer';
 import { FaCalendarAlt, FaClock, FaMapMarkerAlt, FaUsers, FaTag, FaEdit, FaTrash, FaEye, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import type { Event } from '~/services/event';
 import axios from 'axios';
+import { WaitlistTicketModal } from '~/components/WaitlistTicketModal';
+import { ManageWaitlistModal } from '~/components/ManageWaitlistModal';
 
 // API endpoint sesuai dengan dokumentasi API
 const API_URL = 'http://localhost:5000/api/events/my-events';
@@ -60,6 +62,11 @@ export default function MyEventsPage(): React.ReactElement {
   const [eventToDelete, setEventToDelete] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   const navigate = useNavigate();
+  
+  // State untuk modal waitlist
+  const [showWaitlistTicketModal, setShowWaitlistTicketModal] = useState(false);
+  const [showManageWaitlistModal, setShowManageWaitlistModal] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState<string>('');
   
   // State untuk pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -223,6 +230,18 @@ export default function MyEventsPage(): React.ReactElement {
     }
   };
 
+  // Fungsi untuk menampilkan modal waitlist ticket
+  const handleShowWaitlistTicketModal = (eventId: string) => {
+    setSelectedEventId(eventId);
+    setShowWaitlistTicketModal(true);
+  };
+
+  // Fungsi untuk menampilkan modal manage waitlist
+  const handleShowManageWaitlistModal = (eventId: string) => {
+    setSelectedEventId(eventId);
+    setShowManageWaitlistModal(true);
+  };
+
   if (loading && events.length === 0) {
     return (
       <main className="bg-secondary min-h-screen">
@@ -335,6 +354,20 @@ export default function MyEventsPage(): React.ReactElement {
           </div>
         )}
 
+        {/* Modal untuk Waitlist Ticket */}
+        <WaitlistTicketModal 
+          isOpen={showWaitlistTicketModal}
+          eventId={selectedEventId}
+          onClose={() => setShowWaitlistTicketModal(false)}
+        />
+
+        {/* Modal untuk Manage Waitlist */}
+        <ManageWaitlistModal 
+          isOpen={showManageWaitlistModal}
+          eventId={selectedEventId}
+          onClose={() => setShowManageWaitlistModal(false)}
+        />
+
         {loading && (
           <div className="mb-6 flex justify-center">
             <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
@@ -444,6 +477,21 @@ export default function MyEventsPage(): React.ReactElement {
                                 )}
                               </button>
                             </div>
+                          </div>
+                          
+                          <div className="flex flex-wrap mt-3 gap-2">
+                            <button 
+                              onClick={() => handleShowWaitlistTicketModal(event.id)}
+                              className="bg-amber-500 text-white px-3 py-1 text-xs rounded-md hover:bg-amber-600 transition duration-300"
+                            >
+                              Add Waitlist Ticket
+                            </button>
+                            <button 
+                              onClick={() => handleShowManageWaitlistModal(event.id)}
+                              className="bg-purple-500 text-white px-3 py-1 text-xs rounded-md hover:bg-purple-600 transition duration-300"
+                            >
+                              Manage Waitlist
+                            </button>
                           </div>
                         </div>
                       </div>
