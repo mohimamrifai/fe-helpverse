@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useLocation, useNavigate } from 'react-router';
 import { Navbar } from '~/components/navbar';
 import { Footer } from '~/components/footer';
-import { FaSpinner, FaCheckCircle, FaTimesCircle, FaUser, FaEnvelope } from 'react-icons/fa';
+import { FaSpinner, FaCheckCircle, FaTimesCircle, FaUser, FaEnvelope, FaInfoCircle } from 'react-icons/fa';
 import { eventService } from '~/services/event';
 import type { Event } from '~/services/event';
 import { waitingListService } from '~/services/waitingList';
@@ -143,9 +143,24 @@ export default function JoinWaitlistPage() {
         }
     };
 
+    // Handle login redirect
+    const handleLoginRedirect = () => {
+        navigate('/login', { 
+            state: { 
+                redirectTo: `/event/${id}/join-waitlist` 
+            } 
+        });
+    };
+
     // Handle form submission
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!isAuthenticated) {
+            // Redirect to login if not authenticated
+            handleLoginRedirect();
+            return;
+        }
 
         if (!id || !event) {
             setError('Event information is missing');
@@ -174,7 +189,7 @@ export default function JoinWaitlistPage() {
             // Show success modal
             setModalData({
                 title: 'Registration Successful!',
-                message: 'You have been registered to the waiting list for this event. We will send a notification to your email when tickets become available.',
+                message: 'You have been registered to the waiting list for this event. We will send a notification when tickets become available.',
                 status: 'success'
             });
             setIsModalOpen(true);
@@ -256,6 +271,24 @@ export default function JoinWaitlistPage() {
                         <h2 className='text-center text-xl md:text-3xl font-bold text-primary mb-12'>Join the waitlist
                             for this event!</h2>
 
+                        {!isAuthenticated && (
+                            <div className="w-full max-w-md mx-auto mb-6 bg-blue-50 border border-blue-200 rounded-md p-4 flex items-start">
+                                <FaInfoCircle className="text-blue-500 mt-1 mr-3 flex-shrink-0" />
+                                <div>
+                                    <p className="text-sm text-blue-700 font-medium mb-1">Login Required</p>
+                                    <p className="text-sm text-blue-600">
+                                        You need to login first to join the waitlist for this event.
+                                    </p>
+                                    <button 
+                                        onClick={handleLoginRedirect}
+                                        className="mt-2 text-sm text-blue-700 font-medium hover:underline"
+                                    >
+                                        Login Now
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="flex flex-col md:flex-row w-full max-w-5xl mx-auto">
                             {/* Left column - Form */}
                             <div className="md:w-1/2 p-6">
@@ -275,7 +308,8 @@ export default function JoinWaitlistPage() {
                                                 value={formData.name}
                                                 onChange={handleInputChange}
                                                 required
-                                                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                                                disabled={!isAuthenticated}
+                                                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-100 disabled:text-gray-500"
                                                 placeholder="Enter your full name"
                                             />
                                         </div>
@@ -296,7 +330,8 @@ export default function JoinWaitlistPage() {
                                                 value={formData.email}
                                                 onChange={handleInputChange}
                                                 required
-                                                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                                                disabled={!isAuthenticated}
+                                                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-100 disabled:text-gray-500"
                                                 placeholder="Enter your email address"
                                             />
                                         </div>
@@ -308,8 +343,8 @@ export default function JoinWaitlistPage() {
                                     <div className="flex justify-center mt-8">
                                         <button
                                             type="submit"
-                                            disabled={submitting}
-                                            className="w-full bg-primary text-white py-3 px-6 rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-70 flex items-center justify-center text-lg"
+                                            disabled={submitting || !isAuthenticated}
+                                            className="w-full bg-primary text-white py-3 px-6 rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-lg"
                                         >
                                             {submitting ? (
                                                 <>
