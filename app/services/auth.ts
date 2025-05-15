@@ -57,7 +57,14 @@ interface AuthResponse {
 const API_URL = 'http://localhost:5000';
 
 // Function to get token from localStorage
-const getToken = () => localStorage.getItem('token');
+const getToken = () => {
+  const token = localStorage.getItem('token');
+  console.log('🔐 getToken: Token exists:', !!token);
+  if (token) {
+    console.log('🔐 getToken: Token preview:', token.substring(0, 20) + '...');
+  }
+  return token;
+};
 
 // Axios instance dengan header Authorization
 const api = axios.create({

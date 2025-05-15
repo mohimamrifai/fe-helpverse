@@ -10,6 +10,8 @@ interface EventSummaryProps {
   generatedSeats: GeneratedSeat[];
   onRemoveSelection: () => void;
   eventId: string;
+  isWaitlist?: boolean;
+  waitlistTickets?: any[];
 }
 
 export default function EventSummary({
@@ -18,6 +20,8 @@ export default function EventSummary({
   generatedSeats,
   onRemoveSelection,
   eventId,
+  isWaitlist = false,
+  waitlistTickets = []
 }: EventSummaryProps) {
 
 
@@ -89,6 +93,15 @@ export default function EventSummary({
     const cleanSeatIds = getActualSeatIds();
     console.log("Selected seats for payment:", cleanSeatIds);
 
+    // For waitlist bookings, make sure we include complete waitlist ticket info
+    const fullWaitlistTickets = isWaitlist && waitlistTickets ? 
+      waitlistTickets.map(ticket => ({
+        _id: ticket._id,
+        name: ticket.name,
+        description: ticket.description || '',
+        price: ticket.price || 0
+      })) : undefined;
+
     return {
       eventData: {
         id: eventId,
@@ -103,7 +116,9 @@ export default function EventSummary({
       selectedSeats: selectedSeats,
       selectedSeatsLabels: cleanSeatIds,
       ticketType: getSelectedTicketNames(),
-      totalPrice: calculateTotalPrice()
+      totalPrice: calculateTotalPrice(),
+      isWaitlist: isWaitlist,
+      waitlistTickets: fullWaitlistTickets
     };
   };
 
@@ -196,13 +211,37 @@ export default function EventSummary({
             </Link>
           </div>
 
-          <Link
-            to={`/event/${eventId}/join-waitlist`}
-            state={prepareWaitlistData()}
-            className="bg-gray-200 p-2 rounded-full font-bold text-primary cursor-pointer text-center text-sm hover:bg-gray-300 transition-all"
-          >
-            Join Waitlist
-          </Link>
+          {/* Jangan tampilkan tombol Join Waitlist jika sudah di halaman waitlist */}
+          {!isWaitlist && (
+            <Link
+              to={`/event/${eventId}/join-waitlist`}
+              state={prepareWaitlistData()}
+              className="bg-gray-200 p-2 rounded-full font-bold text-primary cursor-pointer text-center text-sm hover:bg-gray-300 transition-all"
+            >
+              Join Waitlist
+            </Link>
+          )}
+
+          {isWaitlist && (
+            <div className="mt-2 text-center">
+              <p className="text-xs text-green-300 font-semibold mb-2">
+                Booking from approved waitlist allocation
+              </p>
+              {waitlistTickets && waitlistTickets.length > 0 && (
+                <div className="mt-3 bg-gray-800 p-2 rounded text-xs">
+                  <p className="mb-2 text-center font-semibold">Available Waitlist Tickets</p>
+                  <ul className="space-y-2">
+                    {waitlistTickets.map(ticket => (
+                      <li key={ticket._id} className="bg-gray-700 p-2 rounded flex justify-between">
+                        <span>{ticket.name}</span>
+                        <span className="font-bold">Rp {ticket.price.toLocaleString('id-ID')}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
 
           <p className='text-xs text-red-500 mt-1'>
             {isEventOrganizer ? 'Your role is event organizer, you can\'t book tickets' : ''}

@@ -480,6 +480,39 @@ const createOrder = async (orderData) => {
 };
 ```
 
+#### Format Request Pemesanan Tiket Waitlist
+
+Untuk memesan tiket waitlist, gunakan format yang sama dengan tambahan parameter `isWaitlist` yang diatur sebagai `true`:
+
+```javascript
+const waitlistOrderPayload = {
+  "eventId": "60a1b2c3d4e5f6g7h8i9j0k1",  // ID event yang akan dipesan
+  "tickets": [
+    {
+      "ticketType": "VIP waitlist",    // Nama tiket waitlist yang tersedia
+      "quantity": 1,                   // Jumlah tiket yang dipesan
+      "seats": [                       // Array kursi yang dipilih (tetap diperlukan untuk validasi)
+        {
+          "row": 1,                    // Nomor baris kursi
+          "column": 1                  // Nomor kolom kursi
+        }
+      ]
+    }
+  ],
+  "paymentInfo": {                     // Informasi pembayaran (wajib)
+    "method": "credit_card",           // Metode pembayaran
+    "transactionId": "txn_12345"       // ID transaksi pembayaran
+  },
+  "isWaitlist": true                   // Flag yang menandakan ini adalah pemesanan tiket waitlist
+};
+```
+
+Pemesanan tiket waitlist memiliki beberapa perbedaan dari pemesanan tiket reguler:
+1. Parameter `isWaitlist` harus diatur sebagai `true`
+2. `ticketType` harus merujuk ke nama tiket waitlist yang telah dibuat oleh event organizer
+3. Kode promo tidak dapat digunakan untuk pemesanan tiket waitlist
+4. Sistem akan mengambil data tiket dari model WaitlistTicket, bukan dari tiket reguler di event
+
 #### Catatan tentang harga tiket:
 Server secara otomatis mengambil harga tiket dari database berdasarkan `ticketType` yang dikirimkan. Anda tidak perlu mengirim harga tiket dalam request. Ini memastikan bahwa harga yang digunakan adalah harga yang akurat dan terkini dari server.
 
@@ -490,6 +523,12 @@ Server secara otomatis mengambil harga tiket dari database berdasarkan `ticketTy
 4. Kursi yang dipilih harus tersedia (belum dipesan)
 5. Kode promo harus valid dan masih berlaku jika disertakan
 6. Informasi pembayaran harus disertakan
+
+#### Validasi Tambahan untuk Pemesanan Tiket Waitlist:
+1. Parameter `isWaitlist` harus bernilai `true`
+2. Tiket yang dipilih harus merujuk ke tiket waitlist yang valid
+3. Kode promo tidak akan diaplikasikan pada pemesanan tiket waitlist
+4. Kursi untuk tiket waitlist tetap harus disediakan dalam format yang sama untuk validasi, meskipun tidak memengaruhi denah kursi event asli
 
 #### Response Success (201 Created)
 ```json
@@ -523,6 +562,44 @@ Server secara otomatis mengambil harga tiket dari database berdasarkan `ticketTy
       "transactionId": "txn_12345",
       "paidAt": "2023-05-15T08:30:00.000Z"
     },
+    "createdAt": "2023-05-15T08:30:00.000Z",
+    "updatedAt": "2023-05-15T08:30:00.000Z"
+  }
+}
+```
+
+#### Response Success Pemesanan Tiket Waitlist (201 Created)
+```json
+{
+  "success": true,
+  "data": {
+    "_id": "order_id_here",
+    "user": "user_id_here",
+    "event": {
+      "_id": "event_id_here",
+      "name": "Tech Conference 2025",
+      // ...data event lainnya
+    },
+    "tickets": [
+      {
+        "ticketType": "VIP waitlist",
+        "quantity": 1,
+        "seats": [
+          { "row": 1, "column": 1 }
+        ],
+        "price": 100,
+        "isWaitlist": true
+      }
+    ],
+    "totalAmount": 100,
+    "discount": 0,
+    "status": "confirmed",
+    "paymentInfo": {
+      "method": "credit_card",
+      "transactionId": "txn_12345",
+      "paidAt": "2023-05-15T08:30:00.000Z"
+    },
+    "isWaitlist": true,
     "createdAt": "2023-05-15T08:30:00.000Z",
     "updatedAt": "2023-05-15T08:30:00.000Z"
   }
@@ -602,6 +679,7 @@ Server secara otomatis mengambil harga tiket dari database berdasarkan `ticketTy
     quantity: number;       // Jumlah tiket
     seats: [{row: number, column: number}]; // Kursi yang dipilih
     price: number;          // Harga saat pembelian
+    isWaitlist: boolean;    // Flag menandakan ini adalah tiket waitlist
   }];
   totalAmount: number;      // Total jumlah yang dibayarkan
   discount: number;         // Diskon yang diterapkan jika ada
@@ -612,6 +690,7 @@ Server secara otomatis mengambil harga tiket dari database berdasarkan `ticketTy
     transactionId: string;
     paidAt: Date;
   };
+  isWaitlist: boolean;      // Flag menandakan ini adalah pemesanan tiket waitlist
   createdAt: Date;
   updatedAt: Date;
 }

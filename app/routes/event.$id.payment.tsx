@@ -20,6 +20,8 @@ interface PaymentPageState {
   selectedSeatsLabels: string[];
   ticketType: string;
   totalPrice: number;
+  isWaitlist?: boolean;
+  waitlistTickets?: { _id: string; name: string }[];
 }
 
 interface PromotionalOffer {
@@ -232,8 +234,17 @@ export default function EventPaymentPage(): React.ReactElement {
             
             // Cari nama tiket dari event
             const getTicketNameById = (ticketId: string): string => {
-                // Gunakan nama tiket dari data payment (aman dari error tipe)
-                return paymentInfo.ticketType || 'Regular';
+                // Untuk tiket waitlist, gunakan ID tiket asli dari tiket waitlist
+                if (paymentInfo.isWaitlist && paymentInfo.waitlistTickets) {
+                    // Jika data waitlistTickets tersedia, cari nama berdasarkan ID
+                    const waitlistTicket = paymentInfo.waitlistTickets.find(ticket => ticket._id === ticketId);
+                    if (waitlistTicket) {
+                        return waitlistTicket.name;
+                    }
+                }
+                
+                // Fallback ke nama tiket dari data payment jika ada
+                return paymentInfo.ticketType || ticketId;
             };
             
             ticketTypeData.forEach(data => {
@@ -293,39 +304,91 @@ export default function EventPaymentPage(): React.ReactElement {
             // Format booking data according to API documentation format
             const bookingData: {
                 eventId: string | undefined;
-                tickets: { ticketType: string; quantity: number; seats: any; }[];
-                paymentInfo: { method: string; transactionId: string; };
+                tickets: Array<{
+                    ticketType: string; 
+                    quantity: number; 
+                    seats: Array<{row: number, column: number}>
+                }>;
+                paymentMethod?: string;
+                paymentInfo?: {
+                    method: string;
+                    transactionId: string;
+                };
+                isWaitlist?: boolean;
                 promoCode?: string;
             } = {
                 eventId: id,
-                tickets: Array.from(ticketMap.entries()).map(([ticketTypeId, seats]) => ({
-                    ticketType: ticketNameMap.get(ticketTypeId) || "Regular", // Gunakan nama tiket
-                    quantity: seats.length,
-                    seats: seats
-                })),
+                tickets: [],
+                paymentMethod: paymentMethod,
                 paymentInfo: {
                     method: paymentMethod,
                     transactionId: `TRX-${Date.now()}`
-                }
+                },
+                isWaitlist: paymentInfo.isWaitlist || false
             };
             
-            if (appliedPromo) {
+            // Process tickets based on waitlist status
+            if (paymentInfo.isWaitlist && paymentInfo.waitlistTickets) {
+                // For waitlist bookings, use the exact name from waitlist tickets
+                Array.from(ticketMap.entries()).forEach(([ticketTypeId, seats]) => {
+                    // Find the waitlist ticket with this ID
+                    const waitlistTicket = paymentInfo.waitlistTickets?.find(t => t._id === ticketTypeId);
+                    
+                    if (waitlistTicket) {
+                        console.log(`Found matching waitlist ticket: ${waitlistTicket.name}`);
+                        
+                        // Use the exact name from the waitlist ticket
+                        bookingData.tickets.push({
+                            ticketType: waitlistTicket.name,  // Use the exact name
+                            quantity: seats.length,
+                            seats: seats as Array<{row: number, column: number}>
+                        });
+                    } else {
+                        console.warn(`Could not find waitlist ticket for ID: ${ticketTypeId}`);
+                        // Fallback to using "VIP waitlist" as this should exist on the server
+                        bookingData.tickets.push({
+                            ticketType: "VIP waitlist",
+                            quantity: seats.length,
+                            seats: seats as Array<{row: number, column: number}>
+                        });
+                    }
+                });
+            } else {
+                // For regular bookings, use the ticket type name from the payment info
+                bookingData.tickets = Array.from(ticketMap.entries()).map(([ticketTypeId, seats]) => {
+                    const ticketName = ticketNameMap.get(ticketTypeId) || "Regular";
+                    return {
+                        ticketType: ticketName,
+                        quantity: seats.length,
+                        seats: seats as Array<{row: number, column: number}>
+                    };
+                });
+            }
+            
+            if (appliedPromo && !paymentInfo.isWaitlist) {
                 bookingData.promoCode = appliedPromo.code;
             }
             
             console.log('Sending booking data:', JSON.stringify(bookingData, null, 2));
+            
+            // Coba kedua format token untuk memastikan kompatibilitas
+            const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+            console.log('Token for authorization:', token ? `Token exists: ${token.substring(0, 20)}...` : 'No token found');
+            console.log('User information:', user);
             
             // Send booking request using the correct API endpoint (/api/orders)
             const response = await fetch('http://localhost:5000/api/orders', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': token ? `Bearer ${token}` : ''
                 },
                 body: JSON.stringify(bookingData)
             });
             
+            console.log('Response status:', response.status);
             const result = await response.json();
+            console.log('Response data:', result);
             
             if (!response.ok) {
                 throw new Error(result.message || 'Failed to create booking');
@@ -380,7 +443,11 @@ export default function EventPaymentPage(): React.ReactElement {
 
     // Handle going back to seat selection while preserving seat selections
     const handleBackToSeats = () => {
-        navigate(`/event/${id}/book`, {
+        // Check if we came from waitlist or regular booking
+        const isFromWaitlist = paymentInfo?.isWaitlist;
+        
+        // Navigate back to the appropriate page
+        navigate(`/event/${id}/${isFromWaitlist ? 'waitlist-book' : 'book'}`, {
             state: {
                 preserveSelections: true,
                 selectedSeats: paymentInfo?.selectedSeats || []

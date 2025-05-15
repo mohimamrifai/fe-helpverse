@@ -482,10 +482,10 @@ export default function MyWaitlistPage(): React.ReactElement {
                       <div className="mt-4 space-y-2">
                         {item.status === 'approved' && (
                           <Link
-                            to={`/event/${item.event._id}`}
+                            to={`/event/${item.event._id}/waitlist-book`}
                             className="w-full text-center block text-white px-4 py-2 rounded-full bg-green-500 hover:bg-green-600"
                           >
-                            Buy Tickets
+                            Book Waitlist Tickets
                           </Link>
                         )}
                         

@@ -72,10 +72,24 @@ export const waitingListService = {
    */
   async getUserWaitingList(email: string): Promise<WaitingListResponse> {
     try {
-      const response = await fetch(`${API_URL}/api/waiting-list?email=${encodeURIComponent(email)}`);
+      const token = getToken();
+      
+      if (!token) {
+        throw new Error('You must be logged in first');
+      }
+
+      console.log(`Fetching waitlist with token for email: ${email}`);
+      
+      const response = await fetch(`${API_URL}/api/waiting-list?email=${encodeURIComponent(email)}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       
       if (!response.ok) {
-        throw new Error('Failed to fetch user waiting list data');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch user waiting list data');
       }
       
       return await response.json();
