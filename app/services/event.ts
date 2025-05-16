@@ -627,7 +627,8 @@ export const eventService = {
   // Fungsi untuk membuat booking tiket
   async createBooking(eventId: string, bookingData: BookingParams): Promise<any> {
     try {
-      const response = await api.post(`/api/orders`, {
+      // Ubah format data ke format yang diharapkan oleh orderService
+      const orderData = {
         eventId: eventId,
         tickets: [{
           ticketType: bookingData.ticketTypeId,
@@ -641,13 +642,13 @@ export const eventService = {
           method: "credit_card",
           transactionId: `TRX-${Date.now()}`
         }
-      });
+      };
       
-      if (response.data.success) {
-        return response.data.data;
-      }
+      // Gunakan orderService untuk membuat order baru
+      const { orderService } = await import('./order');
+      const result = await orderService.createOrder(orderData);
       
-      throw new Error(response.data.message || 'Failed to create booking');
+      return result;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
         throw new Error(error.response.data.message || 'Failed to create booking');

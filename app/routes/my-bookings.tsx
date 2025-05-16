@@ -4,29 +4,9 @@ import { Link } from 'react-router';
 import { Navbar } from '~/components/navbar';
 import { Footer } from '~/components/footer';
 import { FaCalendarAlt, FaClock, FaMapMarkerAlt, FaTicketAlt, FaSearch, FaTag } from 'react-icons/fa';
-import axios from 'axios';
-
-// Booking data type
-interface Booking {
-  id: string;
-  eventId: string;
-  eventName: string;
-  eventImage: string;
-  location: string;
-  date: string;
-  time: string;
-  seats: string[];
-  ticketType: string;
-  totalPrice: number;
-  subtotal?: number;
-  discount?: number;
-  promoCode?: string | null;
-  promoDiscount?: number;
-  status: 'active' | 'completed' | 'cancelled';
-  paymentMethod: string;
-  transactionId: string;
-  bookingDate: string;
-}
+import { orderService } from '~/services/order';
+import type { DisplayBooking } from '~/services/order';
+import { useOrders } from '~/hooks/useEvent';
 
 // API endpoint yang sesuai dengan dokumentasi API
 const API_URL = 'http://localhost:5000/api/orders';
@@ -39,7 +19,8 @@ export function meta() {
 }
 
 export default function MyBookingsPage(): React.ReactElement {
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const { orders: apiOrders, loading: apiLoading, error: apiError, fetchOrders, cancelOrder } = useOrders();
+  const [bookings, setBookings] = useState<DisplayBooking[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [loading, setLoading] = useState(true);
@@ -53,133 +34,36 @@ export default function MyBookingsPage(): React.ReactElement {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [bookingToCancel, setBookingToCancel] = useState<string | null>(null);
 
-  const fetchBookings = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Mendapatkan token user dari localStorage sesuai dengan implementasi di services/auth.ts
-      const token = localStorage.getItem('token');
-
-      if (!token) {
-        throw new Error('User tidak terautentikasi');
-      }
-
-      // Menggunakan axios untuk konsistensi dengan implementasi services lainnya
-      const response = await axios.get(API_URL, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      console.log('API response:', response.data);
-
-      if (response.data.success) {
-        // Transform data dari API menjadi format yang diperlukan untuk tampilan
-        const transformedBookings = response.data.data.map((order: any) => ({
-          id: order.id || order._id,
-          eventId: order.event?.id || order.event || '',
-          eventName: order.event?.name || 'Event',
-          eventImage: order.event?.image || '/event-1.png',
-          location: order.event?.location || 'Lokasi tidak tersedia',
-          date: order.event?.date ? new Date(order.event.date).toLocaleDateString('id-ID', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          }) : 'Tanggal tidak tersedia',
-          time: order.event?.time || 'Waktu tidak tersedia',
-          seats: order.tickets?.[0]?.seats?.map((seat: any) => {
-            // Handle different seat format possibilities
-            if (typeof seat === 'string') {
-              return seat;
-            } else if (seat && typeof seat === 'object') {
-              if (seat.row && seat.column) {
-                return `${String.fromCharCode(65 + parseInt(seat.row) - 1)}${seat.column}`;
-              } else if (seat.row && seat.col) {
-                return `${String.fromCharCode(65 + parseInt(seat.row) - 1)}${seat.col}`;
-              }
-            }
-            return 'Unknown';
-          }) || [],
-          ticketType: order.tickets?.[0]?.ticketType || 'Tiket Standar',
-          totalPrice: order.totalAmount || 0,
-          subtotal: order.subtotal || order.totalAmount || 0,
-          discount: order.discount || 0,
-          promoCode: order.promoCode || null,
-          promoDiscount: 0, // Default value jika tidak ada di API
-          status: order.status === 'confirmed' ? 'active' : order.status,
-          paymentMethod: order.paymentInfo?.method || 'Unknown',
-          transactionId: order.paymentInfo?.transactionId || 'Unknown',
-          bookingDate: order.createdAt ? new Date(order.createdAt).toISOString().split('T')[0] : '',
-        }));
-
-        setBookings(transformedBookings);
-      } else {
-        throw new Error(response.data.message || 'Gagal mengambil data booking');
-      }
-    } catch (err) {
-      console.error('Error fetching bookings:', err);
-      if (axios.isAxiosError(err) && err.response) {
-        setError(err.response.data.message || 'Gagal mengambil data booking');
-      } else {
-        setError(err instanceof Error ? err.message : 'Gagal mengambil data booking');
-      }
-      // Set array bookings kosong jika terjadi error
+  // Memperbarui state bookings ketika apiOrders berubah
+  useEffect(() => {
+    if (apiOrders.length > 0) {
+      setBookings(apiOrders);
+      setLoading(false);
+    } else {
+      // Jika tidak ada booking dari API, set array kosong
       setBookings([]);
-    } finally {
       setLoading(false);
     }
-  };
+  }, [apiOrders]);
+
+  // Memperbarui state error ketika apiError berubah
+  useEffect(() => {
+    if (apiError) {
+      setError(apiError);
+      setLoading(false);
+    }
+  }, [apiError]);
+
+  // Memperbarui state loading ketika apiLoading berubah
+  useEffect(() => {
+    setLoading(apiLoading);
+  }, [apiLoading]);
 
   useEffect(() => {
     // Fungsi untuk mengambil data booking dari API
-    fetchBookings();
-
-    // Tambahkan data booking dari session storage jika tersedia
-    const storedData = sessionStorage.getItem('bookingData');
-    if (storedData) {
-      try {
-        const parsedData = JSON.parse(storedData);
-        const newBooking: Booking = {
-          id: `BK-${Date.now().toString().slice(-6)}`,
-          eventId: parsedData.eventId,
-          eventName: parsedData.eventName || 'Music Festival 2025',
-          eventImage: parsedData.eventImage || '/logo-blue.png',
-          location: parsedData.eventLocation || 'HELP Auditorium',
-          date: parsedData.eventDate || 'August 10, 2025',
-          time: parsedData.eventTime || '10AM',
-          seats: parsedData.seats?.map((seat: string) => {
-            if (seat.includes('-')) {
-              const [row, col] = seat.split('-');
-              return `${String.fromCharCode(65 + parseInt(row) - 1)}${col}`;
-            } else {
-              return seat; // Jika format sudah sesuai, gunakan langsung
-            }
-          }) || [],
-          ticketType: parsedData.ticketType || 'VIP Ticket',
-          totalPrice: parsedData.totalPrice || 0,
-          subtotal: parsedData.subtotal || 0,
-          discount: parsedData.discount || 0,
-          promoCode: parsedData.promoCode || null,
-          promoDiscount: parsedData.promoDiscount || 0,
-          status: 'active',
-          paymentMethod: parsedData.paymentMethod || 'mandiri',
-          transactionId: parsedData.transactionId || `TRX-${Date.now()}`,
-          bookingDate: new Date().toISOString().split('T')[0],
-        };
-
-        // Tambahkan ke daftar bookings jika belum ada
-        setBookings(prev => {
-          if (!prev.some(b => b.transactionId === parsedData.transactionId)) {
-            return [newBooking, ...prev];
-          }
-          return prev;
-        });
-      } catch (error) {
-        console.error('Error parsing booking data:', error);
-      }
-    }
+    fetchOrders();
+    
+    // Bagian pengambilan data dari sessionStorage dihapus
   }, []);
 
   const handleCancelBooking = async (bookingId: string) => {
@@ -198,45 +82,28 @@ export default function MyBookingsPage(): React.ReactElement {
       setCancelSuccess(null);
       setShowConfirmModal(false);
 
-      const token = localStorage.getItem('token');
-
-      if (!token) {
-        throw new Error('User tidak terautentikasi');
-      }
-
-      const response = await axios.put(`${API_URL}/${bookingId}/cancel`, {}, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.data.success) {
-        setBookings(prevBookings => 
-          prevBookings.map(booking => 
-            booking.id === bookingId 
-              ? { ...booking, status: 'cancelled' } 
-              : booking
-          )
-        );
-        setCancelSuccess(bookingId);
-        
-        setModalType('success');
-        setModalMessage('Pemesanan berhasil dibatalkan');
-        setShowModal(true);
-        
-        fetchBookings();
-      } else {
-        throw new Error(response.data.message || 'Gagal membatalkan pemesanan');
-      }
+      // Menggunakan cancelOrder dari hook useOrders
+      await cancelOrder(bookingId);
+      
+      // Update state bookings dengan menandai booking yang dibatalkan
+      setBookings(prevBookings => 
+        prevBookings.map(booking => 
+          booking.id === bookingId 
+            ? { ...booking, status: 'cancelled' } 
+            : booking
+        )
+      );
+      
+      setCancelSuccess(bookingId);
+      
+      setModalType('success');
+      setModalMessage('Pemesanan berhasil dibatalkan');
+      setShowModal(true);
     } catch (err) {
       console.error('Error cancelling booking:', err);
       
       let errorMessage = 'Gagal membatalkan pemesanan';
-      
-      if (axios.isAxiosError(err) && err.response) {
-        errorMessage = err.response.data.message || errorMessage;
-      } else if (err instanceof Error) {
+      if (err instanceof Error) {
         errorMessage = err.message;
       }
       
@@ -489,7 +356,7 @@ export default function MyBookingsPage(): React.ReactElement {
             <p className="text-gray-600 mb-6">
               {searchTerm || filterStatus !== 'all'
                 ? 'No bookings match your filters.'
-                : 'You don\'t have any ticket bookings yet.'}
+                : 'You haven\'t made any ticket bookings yet.'}
             </p>
             <Link to="/" className="bg-primary text-white px-6 py-2 rounded-full inline-block">
               Explore Events

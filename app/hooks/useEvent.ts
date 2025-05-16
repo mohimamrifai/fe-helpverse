@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { eventService } from '../services/event';
-import type { Event, BookingParams } from '../services/event';
+import { eventService } from '~/services/event';
+import type { Event, BookingParams } from '~/services/event';
+import { orderService } from '~/services/order';
+import type { Order, CreateOrderParams, DisplayBooking } from '~/services/order';
 
 // Custom hook untuk mengambil daftar event
 export const useEventList = (page = 1, limit = 10, search = '') => {
@@ -114,4 +116,75 @@ export const useCreateBooking = (eventId: string) => {
   };
 
   return { createBooking, loading, error, booking };
+};
+
+// Custom hook untuk operasi order/booking
+export const useOrders = () => {
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [orders, setOrders] = useState<DisplayBooking[]>([]);
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await orderService.getOrders();
+      const transformedOrders = response.map(order => 
+        orderService.transformBookingForDisplay(order)
+      );
+      setOrders(transformedOrders);
+    } catch (err) {
+      console.error('Error fetching orders:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch orders');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cancelOrder = async (orderId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      await orderService.cancelOrder(orderId);
+      // Refresh orders after cancellation
+      await fetchOrders();
+    } catch (err) {
+      console.error('Error cancelling order:', err);
+      setError(err instanceof Error ? err.message : 'Failed to cancel order');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { orders, loading, error, fetchOrders, cancelOrder };
+};
+
+// Custom hook untuk detail order
+export const useOrderDetail = (orderId: string) => {
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [order, setOrder] = useState<DisplayBooking | null>(null);
+
+  const fetchOrderDetail = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await orderService.getOrderById(orderId);
+      setOrder(orderService.transformBookingForDisplay(response));
+    } catch (err) {
+      console.error('Error fetching order detail:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch order detail');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (orderId) {
+      fetchOrderDetail();
+    }
+  }, [orderId]);
+
+  return { order, loading, error, fetchOrderDetail };
 }; 
