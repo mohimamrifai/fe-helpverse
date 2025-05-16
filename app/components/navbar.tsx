@@ -1,8 +1,10 @@
 import { Link, useNavigate } from "react-router";
-import { FaSearch, FaUserCircle } from "react-icons/fa";
+import { FaSearch, FaUserCircle, FaBell } from "react-icons/fa";
 import { useState, useRef, useEffect } from "react";
 import { Logo } from "./logo";
 import { useAuth } from "../contexts/auth";
+import { useNotification } from "../hooks/useNotification";
+import { NotificationPopover } from "./NotificationPopover";
 
 const linksByRole = {
     user: [
@@ -37,8 +39,18 @@ export function Navbar() {
     const { user, logout } = useAuth();
     const [showDropdown, setShowDropdown] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [showNotifications, setShowNotifications] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
+    
+    // Hanya ambil notifikasi jika user adalah role 'user'
+    const { 
+        notifications, 
+        unreadCount, 
+        loading: loadingNotifications,
+        markAsRead,
+        deleteNotification
+    } = useNotification();
 
     const roleLinks = user?.role && linksByRole[user.role as keyof typeof linksByRole] 
         ? linksByRole[user.role as keyof typeof linksByRole] 
@@ -57,10 +69,38 @@ export function Navbar() {
         };
     }, []);
 
+    // Tutup notifikasi saat menu mobile ditutup
+    useEffect(() => {
+        if (!isMobileMenuOpen) {
+            setShowNotifications(false);
+        }
+    }, [isMobileMenuOpen]);
+
     const handleLogout = () => {
         logout();
         setShowDropdown(false);
         navigate("/");
+    };
+    
+    // Toggle notifikasi
+    const toggleNotifications = () => {
+        setShowNotifications(!showNotifications);
+    };
+    
+    // Tutup notifikasi
+    const closeNotifications = () => {
+        setShowNotifications(false);
+    };
+
+    // Toggle menu mobile
+    const toggleMobileMenu = () => {
+        const newState = !isMobileMenuOpen;
+        setIsMobileMenuOpen(newState);
+        
+        // Jika menu ditutup, tutup juga notifikasi
+        if (!newState) {
+            setShowNotifications(false);
+        }
     };
 
     return (
@@ -69,7 +109,7 @@ export function Navbar() {
                 <Logo />
                 <button
                     className="md:hidden text-primary"
-                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    onClick={toggleMobileMenu}
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isMobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
@@ -91,11 +131,48 @@ export function Navbar() {
                 <div className="flex flex-col md:flex-row gap-4 items-center w-full md:w-auto mt-4 md:mt-0">
                     {user ? (
                         <>
-                            {roleLinks.map((link) => (
-                                <Link key={link.to} to={link.to} className="text-primary hover:underline">
-                                    {link.label}
-                                </Link>
-                            ))}
+                            {/* Tombol Notifikasi (hanya untuk user) - Tampilkan di atas untuk mobile */}
+                            {user.role === 'user' && (
+                                <div className="relative order-first md:order-none w-full md:w-auto flex justify-center md:block mb-4 md:mb-0">
+                                    <button
+                                        onClick={toggleNotifications}
+                                        className="text-primary hover:opacity-80 relative"
+                                        aria-label="Notifications"
+                                    >
+                                        <FaBell size={24} />
+                                        {unreadCount > 0 && (
+                                            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                                {unreadCount > 9 ? '9+' : unreadCount}
+                                            </span>
+                                        )}
+                                    </button>
+                                    
+                                    {/* Popover Notifikasi */}
+                                    <NotificationPopover 
+                                        notifications={notifications}
+                                        loading={loadingNotifications}
+                                        isOpen={showNotifications}
+                                        onClose={closeNotifications}
+                                        onMarkAsRead={markAsRead}
+                                        onDelete={deleteNotification}
+                                    />
+                                </div>
+                            )}
+                            
+                            {/* Menu berdasarkan role */}
+                            <div className="w-full md:w-auto flex flex-col md:flex-row items-center gap-4">
+                                {roleLinks.map((link) => (
+                                    <Link 
+                                        key={link.to} 
+                                        to={link.to} 
+                                        className="text-primary hover:underline w-full md:w-auto text-center"
+                                        onClick={() => setIsMobileMenuOpen(false)}
+                                    >
+                                        {link.label}
+                                    </Link>
+                                ))}
+                            </div>
+                            
                             <div className="relative" ref={dropdownRef}>
                                 <button
                                     onClick={() => setShowDropdown(!showDropdown)}

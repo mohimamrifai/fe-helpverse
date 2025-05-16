@@ -12,9 +12,10 @@ interface WaitlistItem {
   _id: string;
   name: string;
   email: string;
-  event: {
+  event?: {
     _id: string;
-    title: string;
+    title?: string;
+    name?: string;
     description?: string;
     date: string;
     time?: string;
@@ -108,8 +109,57 @@ export default function MyWaitlistPage(): React.ReactElement {
       
       console.log('Waitlist API response:', response.data);
       
-      if (response.data.success && response.data.data) {
-        setWaitlistItems(response.data.data);
+      // Log struktur data yang diterima untuk debugging
+      if (response.data && response.data.data && response.data.data.length > 0) {
+        console.log('First item structure:', JSON.stringify(response.data.data[0], null, 2));
+        
+        // Check specifically for event title properties
+        const firstEvent = response.data.data[0].event;
+        if (firstEvent) {
+          console.log('Event properties:', {
+            hasTitle: 'title' in firstEvent,
+            titleValue: firstEvent.title,
+            hasName: 'name' in firstEvent,
+            nameValue: firstEvent.name
+          });
+        }
+      }
+      
+      if (response.data.success && Array.isArray(response.data.data)) {
+        // Validasi dan normalisasi data sebelum di-set ke state
+        const validatedItems = response.data.data.map((item: any) => {
+          // Log untuk debugging
+          console.log('Processing event data:', item.event);
+          
+          return {
+            _id: item._id || '',
+            name: item.name || '',
+            email: item.email || '',
+            event: item.event ? {
+              _id: item.event._id || '',
+              // Periksa properti yang mungkin digunakan untuk judul event
+              title: item.event.title || item.event.name || '',
+              name: item.event.name || item.event.title || '',
+              description: item.event.description || '',
+              date: item.event.date || new Date().toISOString(),
+              time: item.event.time || '',
+              location: item.event.location || 'No Location',
+              image: item.event.image || null,
+              tags: Array.isArray(item.event.tags) ? item.event.tags : []
+            } : null,
+            numberOfTickets: item.numberOfTickets || 0,
+            preferredTicketType: item.preferredTicketType || '',
+            notificationMethod: item.notificationMethod || '',
+            status: item.status || 'pending',
+            registeredAt: item.registeredAt || new Date().toISOString(),
+            phone: item.phone || '',
+            createdAt: item.createdAt || new Date().toISOString(),
+            updatedAt: item.updatedAt || new Date().toISOString()
+          };
+        });
+        
+        console.log('Validated waitlist items:', validatedItems);
+        setWaitlistItems(validatedItems);
       } else {
         setWaitlistItems([]);
       }
@@ -232,6 +282,32 @@ export default function MyWaitlistPage(): React.ReactElement {
   const getStatusLabel = (status: string) => {
     // Return empty string to remove status labels
     return '';
+  };
+
+  // Function to get event title
+  const getEventTitle = (event: any) => {
+    return event.title || event.name || 'No Title';
+  };
+  
+  // Function to get event location
+  const getEventLocation = (event: any) => {
+    return event.location || event.venue || 'No Location';
+  };
+  
+  // Function to safely format date
+  const formatDate = (dateString: string | undefined, defaultText = 'Unknown date') => {
+    if (!dateString) return defaultText;
+    
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (e) {
+      console.error('Error formatting date:', e);
+      return defaultText;
+    }
   };
 
   if (loading) {
@@ -371,48 +447,56 @@ export default function MyWaitlistPage(): React.ReactElement {
                   <div className="flex flex-col md:flex-row gap-4">
                     {/* Event Image */}
                     <div className="md:w-40 h-96 md:h-48 flex-shrink-0 flex justify-center">
-                      <img
-                        src={`http://localhost:5000${item.event.image}`}
-                        alt={item.event.title}
-                        className="w-full h-full object-cover rounded-lg"
-                      />
+                      {item.event && (item.event.image || item.event.image === '') ? (
+                        <img
+                          src={`http://localhost:5000${item.event.image}`}
+                          alt={getEventTitle(item.event) || 'Event Image'}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-200 rounded-lg flex items-center justify-center">
+                          <FaTicketAlt className="text-gray-400 text-5xl" />
+                        </div>
+                      )}
                     </div>
 
                     {/* Main Information */}
                     <div className="flex-grow">
                       <div className="flex flex-col md:flex-row justify-between mb-4">
                         <div>
-                          <h3 className="text-xl font-bold mb-2 text-secondary">{item.event.title}</h3>
+                          <h3 className="text-xl font-bold mb-2 text-secondary">
+                            {item.event ? getEventTitle(item.event) : 'No Event Title'}
+                          </h3>
                           <div className="mb-2">{getStatusLabel(item.status)}</div>
                         </div>
                       </div>
 
                       {/* Event info */}
                       <div className="mt-4 space-y-3">
-                        <div className="flex items-center gap-3 text-sm">
-                          <FaMapMarkerAlt className="text-secondary w-4 h-4" />
-                          <span className="text-secondary">{item.event.location}</span>
-                        </div>
+                        {item.event && (
+                          <div className="flex items-center gap-3 text-sm">
+                            <FaMapMarkerAlt className="text-secondary w-4 h-4" />
+                            <span className="text-secondary">{getEventLocation(item.event)}</span>
+                          </div>
+                        )}
 
-                        <div className="flex items-center gap-3 text-sm">
-                          <FaCalendarAlt className="text-secondary w-4 h-4" />
-                          <span className="text-secondary">
-                            {new Date(item.event.date).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric'
-                            })}
-                          </span>
-                        </div>
+                        {item.event && item.event.date && (
+                          <div className="flex items-center gap-3 text-sm">
+                            <FaCalendarAlt className="text-secondary w-4 h-4" />
+                            <span className="text-secondary">
+                              {formatDate(item.event.date)}
+                            </span>
+                          </div>
+                        )}
 
-                        {item.event.time && (
+                        {item.event && item.event.time && (
                           <div className="flex items-center gap-3 text-sm">
                             <FaClock className="text-secondary w-4 h-4" />
                             <span className="text-secondary">{item.event.time}</span>
                           </div>
                         )}
 
-                        {item.event.tags && item.event.tags.length > 0 && (
+                        {item.event && item.event.tags && item.event.tags.length > 0 && (
                           <div className="flex flex-wrap gap-2 mt-2">
                             {item.event.tags.map(tag => (
                               <span key={tag} className="bg-secondary text-primary px-2 py-1 rounded-full text-xs">
@@ -427,12 +511,12 @@ export default function MyWaitlistPage(): React.ReactElement {
                       <div className="mt-4 space-y-2">
                         <div className="flex items-center gap-3 text-sm">
                           <FaUser className="text-secondary w-4 h-4" />
-                          <span className="text-secondary">{item.name}</span>
+                          <span className="text-secondary">{item.name || 'No Name'}</span>
                         </div>
                         
                         <div className="flex items-center gap-3 text-sm">
                           <FaEnvelope className="text-secondary w-4 h-4" />
-                          <span className="text-secondary">{item.email}</span>
+                          <span className="text-secondary">{item.email || 'No Email'}</span>
                         </div>
                         
                         {item.phone && item.phone !== '-' && (
@@ -457,18 +541,10 @@ export default function MyWaitlistPage(): React.ReactElement {
                             </div>
                           )}
                           <div className="text-sm text-secondary">
-                            <strong>Registered:</strong> {new Date(item.registeredAt).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'long', 
-                              day: 'numeric'
-                            })}
+                            <strong>Registered:</strong> {formatDate(item.registeredAt)}
                           </div>
                           <div className="text-sm text-secondary">
-                            <strong>Created:</strong> {new Date(item.createdAt).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric'
-                            })}
+                            <strong>Created:</strong> {formatDate(item.createdAt)}
                           </div>
                           {item.notificationMethod && (
                             <div className="text-sm text-secondary">
@@ -480,7 +556,7 @@ export default function MyWaitlistPage(): React.ReactElement {
 
                       {/* Actions */}
                       <div className="mt-4 space-y-2">
-                        {item.status === 'approved' && (
+                        {item.status === 'approved' && item.event && item.event._id && (
                           <Link
                             to={`/event/${item.event._id}/waitlist-book`}
                             className="w-full text-center block text-white px-4 py-2 rounded-full bg-green-500 hover:bg-green-600"
