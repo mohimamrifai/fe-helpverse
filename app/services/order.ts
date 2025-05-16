@@ -3,6 +3,7 @@ import { authService } from './auth';
 
 // Base URL untuk API
 const API_URL = 'http://localhost:5000/api/orders';
+const WAITLIST_API_URL = 'http://localhost:5000/api/waiting-list';
 
 // Interface untuk data booking/order
 export interface Order {
@@ -79,6 +80,9 @@ export interface DisplayBooking {
   transactionId: string;
   bookingDate: string;
 }
+
+// Fungsi untuk mendapatkan token dari localStorage
+const getToken = () => localStorage.getItem('token');
 
 /**
  * Service untuk mengelola order/booking
@@ -271,5 +275,5 @@ export const orderService = {
       transactionId: order.paymentInfo?.transactionId || 'Unknown',
       bookingDate: order.createdAt ? new Date(order.createdAt).toISOString().split('T')[0] : '',
     };
-  }
+  },
 }; 

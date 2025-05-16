@@ -234,7 +234,7 @@ export default function EventSummary({
                     {waitlistTickets.map(ticket => (
                       <li key={ticket._id} className="bg-gray-700 p-2 rounded flex justify-between">
                         <span>{ticket.name}</span>
-                        <span className="font-bold">Rp {ticket.price.toLocaleString('id-ID')}</span>
+                        <span className="font-bold">RM {ticket.price.toLocaleString('en-US')}</span>
                       </li>
                     ))}
                   </ul>

@@ -7,7 +7,7 @@ export interface WaitingList {
   email: string;
   phone: string;
   event: string; // Event ID
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'orderCompleted';
   registeredAt: Date;
   notes?: string;
   createdAt: Date;
@@ -28,6 +28,36 @@ export interface WaitingListInput {
   email: string;
   phone?: string;
   event: string; // Event ID
+}
+
+// Interface for waitlist ticket data
+export interface WaitlistTicket {
+  _id: string;
+  name: string;
+  description: string;
+  price: number;
+  quantity: number;
+  originalTicketRef: string;
+  event: string; // Event ID
+  createdBy: string; // User ID
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Interface for waitlist ticket response data
+export interface WaitlistTicketResponse {
+  success: boolean;
+  data: WaitlistTicket[];
+  message?: string;
+}
+
+// Interface for creating waitlist ticket
+export interface WaitlistTicketInput {
+  name: string;
+  description: string;
+  price: number;
+  quantity: number;
+  originalTicketRef: string;
 }
 
 // API Base URL
@@ -138,7 +168,7 @@ export const waitingListService = {
    */
   async updateWaitingListStatus(
     waitingListId: string, 
-    updateData: { status: 'pending' | 'approved' | 'rejected', notes?: string }
+    updateData: { status: 'pending' | 'approved' | 'rejected' | 'orderCompleted', notes?: string }
   ): Promise<any> {
     try {
       const token = getToken();
@@ -164,6 +194,68 @@ export const waitingListService = {
       return await response.json();
     } catch (error) {
       console.error('Error updating waiting list status:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get waitlist tickets for an event - sesuai dokumentasi API
+   * @param eventId Event ID
+   * @returns Response from API containing waitlist tickets
+   */
+  async getEventWaitlistTickets(eventId: string): Promise<WaitlistTicketResponse> {
+    try {
+      console.log('Mengambil tiket waitlist untuk event dengan ID:', eventId);
+      
+      // Menggunakan endpoint yang sesuai dengan dokumentasi API
+      const response = await fetch(`${API_URL}/api/events/${eventId}/waitlist-tickets`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch waitlist tickets');
+      }
+      
+      const data = await response.json();
+      console.log('Waitlist tickets data:', data);
+      return data;
+    } catch (error) {
+      console.error('Error fetching waitlist tickets:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create waitlist ticket for an event - sesuai dokumentasi API
+   * @param eventId Event ID
+   * @param ticketData Waitlist ticket data
+   * @returns Response from API containing created waitlist ticket
+   */
+  async createEventWaitlistTicket(eventId: string, ticketData: WaitlistTicketInput): Promise<any> {
+    try {
+      const token = getToken();
+      
+      if (!token) {
+        throw new Error('You must be logged in first');
+      }
+      
+      // Menggunakan endpoint yang sesuai dengan dokumentasi API
+      const response = await fetch(`${API_URL}/api/events/${eventId}/waitlist-tickets`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(ticketData)
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create waitlist ticket');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error creating waitlist ticket:', error);
       throw error;
     }
   }

@@ -26,7 +26,8 @@ interface WaitlistItem {
   numberOfTickets?: number;
   preferredTicketType?: string;
   notificationMethod?: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'orderCompleted';
+  orderCompleted: boolean;
   registeredAt: string;
   phone?: string;
   createdAt: string;
@@ -127,38 +128,42 @@ export default function MyWaitlistPage(): React.ReactElement {
       
       if (response.data.success && Array.isArray(response.data.data)) {
         // Validasi dan normalisasi data sebelum di-set ke state
-        const validatedItems = response.data.data.map((item: any) => {
-          // Log untuk debugging
-          console.log('Processing event data:', item.event);
-          
-          return {
-            _id: item._id || '',
-            name: item.name || '',
-            email: item.email || '',
-            event: item.event ? {
-              _id: item.event._id || '',
-              // Periksa properti yang mungkin digunakan untuk judul event
-              title: item.event.title || item.event.name || '',
-              name: item.event.name || item.event.title || '',
-              description: item.event.description || '',
-              date: item.event.date || new Date().toISOString(),
-              time: item.event.time || '',
-              location: item.event.location || 'No Location',
-              image: item.event.image || null,
-              tags: Array.isArray(item.event.tags) ? item.event.tags : []
-            } : null,
-            numberOfTickets: item.numberOfTickets || 0,
-            preferredTicketType: item.preferredTicketType || '',
-            notificationMethod: item.notificationMethod || '',
-            status: item.status || 'pending',
-            registeredAt: item.registeredAt || new Date().toISOString(),
-            phone: item.phone || '',
-            createdAt: item.createdAt || new Date().toISOString(),
-            updatedAt: item.updatedAt || new Date().toISOString()
-          };
-        });
+        const validatedItems = response.data.data
+          // Filter out items with status 'orderCompleted' OR orderCompleted: true
+          .filter((item: any) => item.status !== 'orderCompleted' && item.orderCompleted !== true)
+          .map((item: any) => {
+            // Log untuk debugging
+            console.log('Processing event data:', item.event);
+            
+            return {
+              _id: item._id || '',
+              name: item.name || '',
+              email: item.email || '',
+              event: item.event ? {
+                _id: item.event._id || '',
+                // Periksa properti yang mungkin digunakan untuk judul event
+                title: item.event.title || item.event.name || '',
+                name: item.event.name || item.event.title || '',
+                description: item.event.description || '',
+                date: item.event.date || new Date().toISOString(),
+                time: item.event.time || '',
+                location: item.event.location || 'No Location',
+                image: item.event.image || null,
+                tags: Array.isArray(item.event.tags) ? item.event.tags : []
+              } : null,
+              numberOfTickets: item.numberOfTickets || 0,
+              preferredTicketType: item.preferredTicketType || '',
+              notificationMethod: item.notificationMethod || '',
+              status: item.status || 'pending',
+              orderCompleted: item.orderCompleted || false,
+              registeredAt: item.registeredAt || new Date().toISOString(),
+              phone: item.phone || '',
+              createdAt: item.createdAt || new Date().toISOString(),
+              updatedAt: item.updatedAt || new Date().toISOString()
+            };
+          });
         
-        console.log('Validated waitlist items:', validatedItems);
+        console.log('Validated waitlist items (after filtering orderCompleted):', validatedItems);
         setWaitlistItems(validatedItems);
       } else {
         setWaitlistItems([]);

@@ -82,22 +82,22 @@ export function Navbar() {
         navigate("/");
     };
     
-    // Toggle notifikasi
+    // Toggle notifications
     const toggleNotifications = () => {
         setShowNotifications(!showNotifications);
     };
     
-    // Tutup notifikasi
+    // Close notifications
     const closeNotifications = () => {
         setShowNotifications(false);
     };
 
-    // Toggle menu mobile
+    // Toggle mobile menu
     const toggleMobileMenu = () => {
         const newState = !isMobileMenuOpen;
         setIsMobileMenuOpen(newState);
         
-        // Jika menu ditutup, tutup juga notifikasi
+        // If menu is closed, also close notifications
         if (!newState) {
             setShowNotifications(false);
         }
@@ -131,7 +131,7 @@ export function Navbar() {
                 <div className="flex flex-col md:flex-row gap-4 items-center w-full md:w-auto mt-4 md:mt-0">
                     {user ? (
                         <>
-                            {/* Tombol Notifikasi (hanya untuk user) - Tampilkan di atas untuk mobile */}
+                            {/* Notification Button (only for users) - Display at top for mobile */}
                             {user.role === 'user' && (
                                 <div className="relative order-first md:order-none w-full md:w-auto flex justify-center md:block mb-4 md:mb-0">
                                     <button
@@ -147,7 +147,7 @@ export function Navbar() {
                                         )}
                                     </button>
                                     
-                                    {/* Popover Notifikasi */}
+                                    {/* Notification Popover */}
                                     <NotificationPopover 
                                         notifications={notifications}
                                         loading={loadingNotifications}

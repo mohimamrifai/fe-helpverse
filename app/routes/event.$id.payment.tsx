@@ -6,6 +6,7 @@ import { Footer } from '~/components/footer';
 import { FaCalendarAlt, FaClock, FaMapMarkerAlt } from 'react-icons/fa';
 import { useAuth } from '~/contexts/auth';
 import { eventService } from '~/services/event';
+import { orderService } from '~/services/order';
 
 interface PaymentPageState {
   eventData: {
@@ -423,13 +424,16 @@ export default function EventPaymentPage(): React.ReactElement {
                 navigate('/my-bookings');
             }, 3000);
             
+            // Catatan: Proses update status waitlist sudah ditangani otomatis oleh backend
+            // setelah order berhasil dibuat. Tidak perlu memanggil API secara manual dari frontend.
+            
         } catch (error) {
             console.error('Error creating booking:', error);
             
             // Show error message
             setModalMessage({
                 title: 'Booking Failed',
-                message: error instanceof Error ? error.message : 'Gagal membuat pemesanan. Silakan coba lagi.',
+                message: error instanceof Error ? error.message : 'Failed to create booking. Please try again.',
                 status: 'error'
             });
             

@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
-import { FaCheckCircle, FaTrash, FaTimes } from 'react-icons/fa';
+import { FaCheckCircle, FaTrash, FaTimes, FaTicketAlt } from 'react-icons/fa';
 import type { Notification } from '../services/notification';
+import { Link } from 'react-router';
 
 interface NotificationPopoverProps {
   notifications: Notification[];
@@ -36,6 +37,17 @@ export function NotificationPopover({
     };
   }, []);
 
+  // Log eventId for debugging
+  useEffect(() => {
+    if (notifications.length > 0) {
+      notifications.forEach(notification => {
+        if (notification.type === 'waitlist_ticket' && notification.eventId) {
+          console.log('EventId type:', typeof notification.eventId, 'Value:', notification.eventId);
+        }
+      });
+    }
+  }, [notifications]);
+
   // Deteksi klik di luar popover untuk menutup popover
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -62,13 +74,13 @@ export function NotificationPopover({
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
     if (diffMins < 60) {
-      return `${diffMins} menit yang lalu`;
+      return `${diffMins} minutes ago`;
     } else if (diffHours < 24) {
-      return `${diffHours} jam yang lalu`;
+      return `${diffHours} hours ago`;
     } else if (diffDays < 7) {
-      return `${diffDays} hari yang lalu`;
+      return `${diffDays} days ago`;
     } else {
-      return date.toLocaleDateString('id-ID', {
+      return date.toLocaleDateString('en-US', {
         day: 'numeric',
         month: 'short',
         year: 'numeric'
@@ -88,7 +100,7 @@ export function NotificationPopover({
       `}
     >
       <div className="flex justify-between items-center p-3 bg-primary text-white">
-        <h3 className="font-semibold">Notifikasi</h3>
+        <h3 className="font-semibold">Notifications</h3>
         <button onClick={onClose} className="hover:opacity-80">
           <FaTimes />
         </button>
@@ -96,9 +108,9 @@ export function NotificationPopover({
 
       <div className="max-h-[50vh] md:max-h-80 overflow-y-auto">
         {loading ? (
-          <div className="p-4 text-center text-gray-500">Memuat notifikasi...</div>
+          <div className="p-4 text-center text-gray-500">Loading notifications...</div>
         ) : notifications.length === 0 ? (
-          <div className="p-4 text-center text-gray-500">Tidak ada notifikasi</div>
+          <div className="p-4 text-center text-gray-500">No notifications</div>
         ) : (
           <ul>
             {notifications.map((notification) => (
@@ -113,13 +125,26 @@ export function NotificationPopover({
                     <span className="text-xs text-gray-500">
                       {formatDate(new Date(notification.createdAt))}
                     </span>
+                    
+                    {/* Link ke halaman waitlist-book untuk notifikasi tipe waitlist_ticket */}
+                    {notification.type === 'waitlist_ticket' && notification.eventId && (
+                      <div className="mt-2">
+                        <Link 
+                          to={`/event/${notification.eventId}/waitlist-book`}
+                          onClick={onClose}
+                          className="flex items-center text-xs text-primary font-medium hover:underline"
+                        >
+                          <FaTicketAlt className="mr-1" /> Book Waitlist Ticket
+                        </Link>
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-start space-x-1 ml-2">
                     {!notification.isRead && (
                       <button
                         onClick={() => onMarkAsRead(notification._id || notification.id)}
                         className="text-blue-500 hover:text-blue-700 p-1"
-                        title="Tandai sebagai telah dibaca"
+                        title="Mark as read"
                       >
                         <FaCheckCircle size={16} />
                       </button>
@@ -127,7 +152,7 @@ export function NotificationPopover({
                     <button
                       onClick={() => onDelete(notification._id || notification.id)}
                       className="text-red-500 hover:text-red-700 p-1"
-                      title="Hapus notifikasi"
+                      title="Delete notification"
                     >
                       <FaTrash size={16} />
                     </button>

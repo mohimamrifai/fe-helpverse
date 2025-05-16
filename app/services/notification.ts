@@ -55,6 +55,14 @@ api.interceptors.request.use(
 
 // Fungsi untuk normalisasi data notifikasi
 const normalizeNotification = (notificationData: any): Notification => {
+  // Pastikan eventId adalah string
+  let eventId = notificationData.eventId;
+  if (eventId && typeof eventId === 'object') {
+    // Jika eventId adalah objek, ambil properti id atau _id
+    eventId = eventId._id || eventId.id || '';
+    console.log('Normalizing eventId from object:', notificationData.eventId, 'to string:', eventId);
+  }
+
   return {
     _id: notificationData._id || notificationData.id || '',
     id: notificationData.id || notificationData._id || '',
@@ -62,7 +70,7 @@ const normalizeNotification = (notificationData: any): Notification => {
     title: notificationData.title || '',
     message: notificationData.message || '',
     type: notificationData.type || 'system',
-    eventId: notificationData.eventId || undefined,
+    eventId: eventId || undefined,
     ticketId: notificationData.ticketId || undefined,
     isRead: notificationData.isRead || false,
     createdAt: notificationData.createdAt ? new Date(notificationData.createdAt) : new Date(),

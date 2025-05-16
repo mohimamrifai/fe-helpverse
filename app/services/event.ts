@@ -702,16 +702,9 @@ export const eventService = {
    */
   async getEventWaitlistTickets(id: string): Promise<any> {
     try {
-      console.log('Mengambil tiket waitlist untuk event dengan ID:', id);
-      const response = await fetch(`${API_URL}/api/events/${id}/waitlist-tickets`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch waitlist tickets');
-      }
-      
-      const waitlistTickets = await response.json();
-      console.log('Waitlist tickets data:', waitlistTickets);
-      return waitlistTickets;
+      // Gunakan import dinamis untuk menghindari masalah circular dependency
+      const { waitingListService } = await import('./waitingList');
+      return await waitingListService.getEventWaitlistTickets(id);
     } catch (error) {
       console.error('Error fetching waitlist tickets:', error);
       throw error;
