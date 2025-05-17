@@ -13,9 +13,9 @@ export function ButtonAdmin() {
                         <h2 className="text-secondary font-bold text-lg">Analytics</h2>
                     </div>
                     <p className="text-secondary/80 text-sm mt-2">View detailed analytics and reports for all events and users</p>
-                    <button className="mt-4 bg-secondary text-primary px-4 py-2 rounded-md text-sm font-medium hover:bg-secondary/90 transition-colors">
+                    <Link to="/admin-reports" className="mt-4 bg-secondary text-primary px-4 py-2 rounded-md text-sm font-medium hover:bg-secondary/90 transition-colors inline-block">
                         View Analytics
-                    </button>
+                    </Link>
                 </div>
                 
                 <div className="bg-primary rounded-lg shadow-md p-6 hover:shadow-lg transition-all duration-300">

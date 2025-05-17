@@ -18,4 +18,6 @@ export default [
     route("my-waiting-list", "routes/my-waiting-list.tsx"), // my waiting list
     route("my-events", "routes/my-events.tsx"), // my events
     route("event/:id/waitlist-book", "routes/event.$id.waitlist-book.tsx"), // waitlist book
+    route("reports", "routes/reports.tsx"), // reports
+    route("admin-reports", "routes/admin-reports.tsx"), // admin reports
 ] satisfies RouteConfig;
