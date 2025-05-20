@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router";
 import { FaFileDownload, FaChartBar, FaCalendarAlt, FaTable, FaFilter } from "react-icons/fa";
 import { 
@@ -53,13 +53,11 @@ interface TableData {
 
 function ReportPageContent() {
   const navigate = useNavigate();
-  const [reportType, setReportType] = useState<"daily" | "weekly" | "monthly">("monthly");
+  const [reportType, setReportType] = useState<"daily" | "weekly" | "monthly" | "all">("monthly");
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [selectedEvent, setSelectedEvent] = useState<string>("all");
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<Report | null>(null);
-  const [events, setEvents] = useState<{id: string, name: string}[]>([]);
   const [tableData, setTableData] = useState<TableData[]>([]);
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [showTable, setShowTable] = useState<boolean>(false);
@@ -126,6 +124,7 @@ function ReportPageContent() {
   // Fungsi untuk memuat data event milik event organizer
   const loadEvents = async () => {
     try {
+      // Catatan: Fungsi ini tetap ada, tetapi tidak digunakan lagi untuk dropdown event selector
       const response = await fetch('/api/events/my-events', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -137,47 +136,42 @@ function ReportPageContent() {
       }
       
       const data = await response.json();
-      setEvents([{ id: "all", name: "All Events" }, ...data.data]);
+      // Data events masih diload tapi tidak digunakan untuk filter
     } catch (err) {
       setError('Failed to load events.');
     }
   };
 
-  // Fungsi untuk memuat data report
-  const loadReport = async () => {
+  // Load events saat komponen dimuat
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        await loadEvents();
+        
+        // Load data awal dari endpoint /api/reports/all sebagai default
+        await loadAllReports();
+      } catch (err) {
+        console.error("Gagal memuat data awal:", err);
+        setLoading(false);
+      }
+    };
+    
+    loadInitialData();
+  }, []);
+
+  // Fungsi khusus untuk memuat data /api/reports/all
+  const loadAllReports = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      // Dapatkan token dari localStorage
       const token = localStorage.getItem('token');
       if (!token) {
         throw new Error('Token not found. Please login again.');
       }
       
-      // Debug mode - cek token
-      console.log('Using token for loadReport (first 10 chars):', token.substring(0, 10) + '...');
-      
-      // Buat query parameters
-      const params = new URLSearchParams();
-      
-      // Hanya tambahkan parameter jika benar-benar diperlukan untuk menghindari masalah validasi
-      if (reportType !== "weekly") {
-        // Format tanggal yang konsisten YYYY-MM-DD
-        const formattedDate = selectedDate.split('T')[0]; // Pastikan format tanggal bersih
-        params.append('date', formattedDate);
-      }
-      
-      // Tambahkan event ID jika specific event dipilih
-      if (selectedEvent !== "all") {
-        params.append('eventId', selectedEvent);
-      }
-      
-      // Debug mode - log parameter yang dikirim
-      console.log(`Fetching report data: /api/reports/${reportType}?${params.toString()}`);
-      
-      // Buat fetch request dengan explicit headers
-      const response = await fetch(`/api/reports/${reportType}?${params.toString()}`, {
+      // Ambil data dari endpoint /api/reports/all (tanpa parameter eventId)
+      const response = await fetch('/api/reports/all', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -186,10 +180,6 @@ function ReportPageContent() {
         }
       });
       
-      // Log status untuk debugging
-      console.log('Report fetch status:', response.status, response.statusText);
-      
-      // Periksa status response
       if (response.status === 401) {
         throw new Error('Your session has expired. Please login again.');
       }
@@ -201,15 +191,86 @@ function ReportPageContent() {
       
       const data = await response.json();
       
-      // Debug mode
-      console.log('Report data retrieved successfully:', data);
+      // Cek jika API mengembalikan pesan "No data available"
+      if (data.message && data.message === "No data available.") {
+        console.warn('API mengembalikan: No data available.');
+        setReport(null);
+        setTableData([]);
+        return;
+      }
       
-      // Proses data
-      processReportData(data);
-      
+      if (data && data.totalOrders !== undefined) {
+        // Format data untuk tampilan report
+        const allReportData = {
+          ticketsSold: data.ticketsSold || 0,
+          revenue: data.revenue || 0,
+          occupancyPercentage: data.occupancyPercentage || 0,
+          startDate: "All Time", // untuk format weekly
+          endDate: "Report",
+          salesData: Object.keys(data.ordersByDate || {}).map(date => ({
+            day: date,
+            count: (data.ordersByDate[date] || []).length
+          })),
+          revenueData: Object.keys(data.ordersByDate || {}).map(date => ({
+            day: date,
+            amount: (data.ordersByDate[date] || []).reduce((sum: number, order: any) => sum + (order.totalAmount || 0), 0)
+          })),
+          occupancyData: data.occupancyByDate ? Object.keys(data.occupancyByDate || {}).map(date => ({
+            day: date,
+            percentage: data.occupancyByDate[date] || data.occupancyPercentage
+          })) : []
+        };
+        
+        // Set report sebagai weekly report untuk tampilan
+        setReport({
+          startDate: allReportData.salesData.length > 0 ? allReportData.salesData[0].day : "All Time",
+          endDate: allReportData.salesData.length > 0 ? allReportData.salesData[allReportData.salesData.length - 1].day : "Report",
+          ticketsSold: allReportData.ticketsSold,
+          revenue: allReportData.revenue,
+          occupancyPercentage: allReportData.occupancyPercentage,
+          salesData: allReportData.salesData,
+          revenueData: allReportData.revenueData
+        } as WeeklyReport);
+        
+        // Buat data tabel
+        if (allReportData.salesData.length > 0) {
+          const tableRows = allReportData.salesData.map((item, index) => {
+            // Cari occupancy untuk tanggal ini jika tersedia
+            const dateOccupancy = allReportData.occupancyData && allReportData.occupancyData.length > 0
+              ? allReportData.occupancyData.find(o => o.day === item.day)?.percentage
+              : null;
+            
+            return {
+            id: index.toString(),
+            date: item.day,
+            ticketsSold: item.count,
+            revenue: allReportData.revenueData[index]?.amount || 0,
+              seatsFilledPercent: formatPercentage(dateOccupancy || data.occupancyPercentage)
+            };
+          });
+          setTableData(tableRows);
+        } else {
+          // Fallback jika tidak ada data tanggal
+          setTableData([{
+            id: "1",
+            date: "All Time",
+            ticketsSold: allReportData.ticketsSold,
+            revenue: allReportData.revenue,
+            seatsFilledPercent: formatPercentage(allReportData.occupancyPercentage)
+          }]);
+        }
+      } else {
+        // Pesan untuk debugging
+        console.warn('API mengembalikan data yang tidak sesuai format yang diharapkan:', data);
+        
+        // Set report ke null agar tampilkan pesan "Tidak ada data"
+        setReport(null);
+        setTableData([]);
+      }
     } catch (err: any) {
-      console.error('Failed to load report:', err);
-      setError(err.message || 'Failed to load report data. Please try again.');
+      console.error('Failed to load all reports:', err);
+      
+      // Set report ke null agar tampilkan pesan "Tidak ada data"
       setReport(null);
       setTableData([]);
     } finally {
@@ -253,15 +314,20 @@ function ReportPageContent() {
       // Buat query parameters
       const params = new URLSearchParams();
       
-      // Pastikan format parameter sesuai dokumentasi API
-      params.append('type', reportType);
+      // Cek apakah ada filter aktif (report type selain default)
+      // Jika tidak ada filter, gunakan 'all'
+      const isFilterActive = reportType !== "monthly";
+      const downloadType = isFilterActive ? reportType : 'all';
+      
+      // Gunakan tipe yang sesuai dengan permintaan
+      params.append('type', downloadType);
       
       // Format tanggal yang konsisten
-      const formattedDate = selectedDate.split('T')[0]; // Pastikan format tanggal bersih
-      params.append('date', formattedDate);
-      
-      if (selectedEvent !== "all") {
-        params.append('eventId', selectedEvent);
+      let formattedDate = '';
+      // Tanggal diperlukan untuk tipe 'daily' dan 'monthly', tetapi tidak untuk 'weekly' dan 'all'
+      if (downloadType !== 'weekly' && downloadType !== 'all' as string) {
+        formattedDate = selectedDate.split('T')[0]; // Pastikan format tanggal bersih
+        params.append('date', formattedDate);
       }
       
       // Debug mode - log parameter yang dikirim
@@ -322,7 +388,7 @@ function ReportPageContent() {
       console.log('Blob size:', blob.size, 'bytes');
       
       // Cari nama file dari header content-disposition
-      let filename = `report-${reportType}-${formattedDate}.pdf`;
+      let filename = `report-${downloadType}-${downloadType !== 'weekly' && downloadType !== 'all' as string ? formattedDate : 'current'}.pdf`;
       const contentDisposition = response.headers.get('content-disposition');
       if (contentDisposition && contentDisposition.includes('filename=')) {
         const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
@@ -356,17 +422,92 @@ function ReportPageContent() {
     }
   };
 
-  // Load events saat komponen dimuat
+  // Buat ref di dalam body fungsi komponen
+  const isInitialMount = useRef(true);
+  
+  // Load report saat paramater filter berubah
   useEffect(() => {
-    loadEvents();
-  }, []);
-
-  // Load report saat parameter berubah
-  useEffect(() => {
-    if (reportType && selectedDate) {
-      loadReport();
+    // Skip pada mounting awal karena sudah dimuat di useEffect sebelumnya
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
     }
-  }, [reportType, selectedDate, selectedEvent]);
+    
+    // Jalankan loadReport saat filter berubah (tanpa selectedEvent)
+    loadReport();
+  }, [reportType, selectedDate]);
+  
+  // Fungsi untuk memuat report berdasarkan filter
+  const loadReport = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Token not found. Please login again.');
+      }
+      
+      // Jika memilih tipe 'all', gunakan endpoint /api/reports/all
+      if (reportType === 'all') {
+        await loadAllReports();
+        return;
+      }
+      
+      // Buat query parameters
+      const params = new URLSearchParams();
+      
+      // Tambahkan parameter filter (tanpa eventId)
+      if (reportType !== "weekly") {
+        const formattedDate = selectedDate.split('T')[0];
+        params.append('date', formattedDate);
+      }
+      
+      // Buat fetch request
+      const response = await fetch(`/api/reports/${reportType}?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (response.status === 401) {
+        throw new Error('Your session has expired. Please login again.');
+      }
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || `Error ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      // Jika tidak ada data untuk filter, coba ambil data dari /api/reports/all
+      if (data.message && data.message.includes("Insufficient data")) {
+        await loadAllReports();
+        return;
+      }
+      
+      // Proses data normal jika ada
+      processReportData(data);
+      
+    } catch (err: any) {
+      console.error('Failed to load report:', err);
+      
+      // Jika gagal, coba ambil data dari /api/reports/all
+      try {
+        await loadAllReports();
+      } catch (fallbackError) {
+        setError(err.message || 'Failed to load report data. Please try again.');
+        setReport(null);
+        setTableData([]);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Format data untuk tabel berdasarkan tipe report
   const processReportData = (data: any) => {
@@ -375,6 +516,60 @@ function ReportPageContent() {
       setReport(null);
       setTableData([]);
     } else {
+      // Cek apakah ini data dari /api/reports/all
+      if (data.totalOrders !== undefined && data.ordersData) {
+        // Format data dari /api/reports/all
+        const allReportData = {
+          ticketsSold: data.ticketsSold,
+          revenue: data.revenue,
+          occupancyPercentage: data.occupancyPercentage,
+          // Buat data salesData dari ordersData berdasarkan tanggal
+          salesData: Object.keys(data.ordersByDate || {}).map(date => ({
+            day: date,
+            count: data.ordersByDate[date].length
+          })),
+          // Buat data revenueData dari ordersData berdasarkan tanggal
+          revenueData: Object.keys(data.ordersByDate || {}).map(date => ({
+            day: date,
+            amount: (data.ordersByDate[date] || []).reduce((sum: number, order: any) => sum + (order.totalAmount || 0), 0)
+          })),
+          // Tambahkan occupancyData berdasarkan tanggal (jika tersedia)
+          occupancyData: data.occupancyByDate ? Object.keys(data.occupancyByDate || {}).map(date => ({
+            day: date,
+            percentage: data.occupancyByDate[date] || data.occupancyPercentage
+          })) : []
+        };
+        
+        // Set sebagai weekly report untuk tampilan
+        setReport({
+          startDate: allReportData.salesData.length > 0 ? allReportData.salesData[0].day : "",
+          endDate: allReportData.salesData.length > 0 ? allReportData.salesData[allReportData.salesData.length - 1].day : "",
+          ticketsSold: allReportData.ticketsSold,
+          revenue: allReportData.revenue,
+          occupancyPercentage: allReportData.occupancyPercentage,
+          salesData: allReportData.salesData,
+          revenueData: allReportData.revenueData
+        } as WeeklyReport);
+        
+        // Buat data tabel dari sales data
+        const tableRows = allReportData.salesData.map((item, index) => {
+          // Cari occupancy untuk tanggal ini jika tersedia
+          const dateOccupancy = allReportData.occupancyData && allReportData.occupancyData.length > 0
+            ? allReportData.occupancyData.find(o => o.day === item.day)?.percentage
+            : null;
+            
+          return {
+          id: index.toString(),
+          date: item.day,
+          ticketsSold: item.count,
+            revenue: allReportData.revenueData[index]?.amount || 0,
+            seatsFilledPercent: formatPercentage(dateOccupancy || data.occupancyPercentage)
+          };
+        });
+        
+        setTableData(tableRows);
+      } else {
+        // Proses untuk format report normal
       setReport(data);
       
       if (reportType === "daily") {
@@ -389,25 +584,41 @@ function ReportPageContent() {
       } else if (reportType === "weekly") {
         const weeklyData = data as WeeklyReport;
         // Buat data tabel dari sales data per hari
-        const tableRows = weeklyData.salesData.map((item, index) => ({
+        const tableRows = weeklyData.salesData.map((item, index) => {
+          // Cek jika ada data occupancy harian dalam respons API
+          const dailyOccupancy = data.occupancyByDay 
+            ? data.occupancyByDay[item.day] 
+            : weeklyData.occupancyPercentage;
+            
+          return {
           id: index.toString(),
           date: item.day,
           ticketsSold: item.count,
           revenue: weeklyData.revenueData[index].amount,
-          seatsFilledPercent: formatPercentage(weeklyData.occupancyPercentage)
-        }));
+            seatsFilledPercent: formatPercentage(dailyOccupancy)
+          };
+        });
         setTableData(tableRows);
       } else if (reportType === "monthly") {
         const monthlyData = data as MonthlyReport;
         // Buat data tabel dari sales data per hari dalam bulan
-        const tableRows = monthlyData.salesData.map((item, index) => ({
+        const tableRows = monthlyData.salesData.map((item, index) => {
+          const dateString = `${monthlyData.year}-${monthlyData.month.toString().padStart(2, '0')}-${item.day.toString().padStart(2, '0')}`;
+          // Cek jika ada data occupancy harian dalam respons API
+          const dailyOccupancy = data.occupancyByDay 
+            ? data.occupancyByDay[dateString] || data.occupancyByDay[item.day.toString()]
+            : monthlyData.occupancyPercentage;
+            
+          return {
           id: index.toString(),
-          date: `${monthlyData.year}-${monthlyData.month.toString().padStart(2, '0')}-${item.day.toString().padStart(2, '0')}`,
+            date: dateString,
           ticketsSold: item.count,
           revenue: monthlyData.revenueData[index].amount,
-          seatsFilledPercent: formatPercentage(monthlyData.occupancyPercentage)
-        }));
+            seatsFilledPercent: formatPercentage(dailyOccupancy)
+          };
+        });
         setTableData(tableRows);
+        }
       }
     }
   };
@@ -444,6 +655,8 @@ function ReportPageContent() {
         return 'Weekly';
       case 'monthly':
         return 'Monthly';
+      case 'all':
+        return 'All Reports';
       default:
         return 'Report';
     }
@@ -478,33 +691,34 @@ function ReportPageContent() {
             <button
               onClick={downloadReport}
               className="px-3 py-1.5 bg-gray-700 text-white rounded-md flex items-center shadow-sm hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-              disabled={!report || loading}
+              disabled={loading}
             >
               <FaFileDownload className="mr-1.5" />
-              Download PDF
+              Download Report
             </button>
           </div>
         </div>
         
         {/* Filter section - collapsible */}
         <div className={`bg-white rounded-lg shadow-md p-3 mb-4 transition-all duration-300 ${showFilters ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Report Type */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Report Type</label>
               <select
                 className="border border-gray-300 rounded-md px-2 py-1.5 w-full bg-white shadow-sm text-sm focus:ring-2 focus:ring-secondary/50 focus:border-secondary transition"
                 value={reportType}
-                onChange={(e) => setReportType(e.target.value as "daily" | "weekly" | "monthly")}
+                onChange={(e) => setReportType(e.target.value as "daily" | "weekly" | "monthly" | "all")}
               >
+                <option value="all">All Reports</option>
                 <option value="daily">Daily</option>
                 <option value="weekly">Weekly</option>
                 <option value="monthly">Monthly</option>
               </select>
             </div>
             
-            {/* Date Picker (tidak ditampilkan untuk weekly report) */}
-            {reportType !== "weekly" && (
+            {/* Date Picker (tidak ditampilkan untuk weekly report dan all report) */}
+            {reportType !== "weekly" && reportType !== "all" && (
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Date</label>
                 <div className="relative">
@@ -520,32 +734,6 @@ function ReportPageContent() {
                 </div>
               </div>
             )}
-            
-            {/* Event Selector */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Event</label>
-              <select
-                className="border border-gray-300 rounded-md px-2 py-1.5 w-full bg-white shadow-sm text-sm focus:ring-2 focus:ring-secondary/50 focus:border-secondary transition"
-                value={selectedEvent}
-                onChange={(e) => setSelectedEvent(e.target.value)}
-              >
-                {events.map(event => (
-                  <option key={event.id} value={event.id}>{event.name}</option>
-                ))}
-              </select>
-            </div>
-            
-            {/* Action */}
-            <div className="flex items-end">
-              <button
-                onClick={loadReport}
-                className="w-full px-3 py-1.5 bg-secondary text-white rounded-md flex items-center justify-center shadow-sm hover:bg-secondary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                disabled={loading}
-              >
-                <FaChartBar className="mr-1.5" />
-                {loading ? 'Loading...' : 'Generate Report'}
-              </button>
-            </div>
           </div>
         </div>
         
@@ -572,8 +760,8 @@ function ReportPageContent() {
               <svg className="w-8 h-8 mb-3 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
               </svg>
-              <p className="text-sm font-medium">No data available for the selected period</p>
-              <p className="mt-1 text-xs">Please select a different date range or event</p>
+              <p className="text-sm font-medium">Tidak ada data untuk periode yang dipilih</p>
+              <p className="mt-1 text-xs">Silakan pilih rentang tanggal atau tambahkan event baru</p>
             </div>
           </div>
         )}
@@ -605,10 +793,14 @@ function ReportPageContent() {
                 <div className="mt-1">
                   <span className="text-xs text-gray-500">{getReportTypeLabel()} | {
                     reportType === 'weekly' 
+                      ? ((report as WeeklyReport).startDate && (report as WeeklyReport).endDate 
                       ? (report as WeeklyReport).startDate + ' - ' + (report as WeeklyReport).endDate
+                        : 'All Time')
                       : reportType === 'monthly'
-                        ? `${(report as MonthlyReport).year}-${(report as MonthlyReport).month}`
-                        : (report as DailyReport).date
+                        ? ((report as MonthlyReport).year !== undefined && (report as MonthlyReport).month !== undefined 
+                          ? `${(report as MonthlyReport).year}-${(report as MonthlyReport).month.toString().padStart(2, '0')}`
+                          : 'All Time Report')
+                        : (report as DailyReport).date || 'All Time'
                   }</span>
                 </div>
               </div>
@@ -626,7 +818,7 @@ function ReportPageContent() {
                   </div>
                 </div>
                 <div className="mt-1">
-                  <span className="text-xs text-gray-500">{getReportTypeLabel()} | {selectedEvent === 'all' ? 'All Events' : events.find(e => e.id === selectedEvent)?.name}</span>
+                  <span className="text-xs text-gray-500">{getReportTypeLabel()} | All Events</span>
                 </div>
               </div>
               
