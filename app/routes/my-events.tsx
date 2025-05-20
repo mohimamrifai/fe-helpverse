@@ -486,12 +486,6 @@ export default function MyEventsPage(): React.ReactElement {
                             >
                               Add Waitlist Ticket
                             </button>
-                            <button 
-                              onClick={() => handleShowManageWaitlistModal(event.id)}
-                              className="bg-purple-500 text-white px-3 py-1 text-xs rounded-md hover:bg-purple-600 transition duration-300"
-                            >
-                              Manage Waitlist
-                            </button>
                           </div>
                         </div>
                       </div>

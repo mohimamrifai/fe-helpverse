@@ -68,7 +68,6 @@ export default function EventWaitlistBookingPage() {
     useEffect(() => {
         // Wait until authentication process is complete
         if (authLoading) {
-            console.log('Auth context is still loading, waiting...');
             return;
         }
 
@@ -82,28 +81,22 @@ export default function EventWaitlistBookingPage() {
 
                 // Verify user is authenticated
                 if (!isAuthenticated || !user) {
-                    console.log('User authentication check failed. isAuthenticated:', isAuthenticated, 'user:', user);
                     setError('User not logged in. Please login first to access waitlist tickets.');
                     setLoading(false);
                     return;
                 }
 
                 const userEmail = user.email;
-                console.log('Using user email for waitlist:', userEmail);
 
                 // Get event data from API
                 const eventData = await eventService.getEventById(id);
-                console.log('Event data retrieved:', eventData.name);
                 setEvent(eventData);
 
                 // Get waitlist tickets from API
-                console.log('Fetching waitlist tickets for event:', id);
                 const waitlistTicketsResponse = await eventService.getEventWaitlistTickets(id);
                 if (waitlistTicketsResponse.success && waitlistTicketsResponse.data && waitlistTicketsResponse.data.length > 0) {
-                    console.log('Waitlist tickets found:', waitlistTicketsResponse.data.length);
                     setWaitlistTickets(waitlistTicketsResponse.data);
                 } else {
-                    console.log('No waitlist tickets found for this event');
                     setError('No waitlist tickets are available for this event.');
                     setLoading(false);
                     return;
@@ -113,19 +106,14 @@ export default function EventWaitlistBookingPage() {
                 // Note: This is commented out for the demo, we don't need to check waitlist status
                 // We only need to display available waitlist tickets
                 /*
-                console.log('Fetching waitlist data for email:', userEmail);
                 const waitlistResponse = await waitingListService.getUserWaitingList(userEmail);
-                console.log('Waitlist response:', waitlistResponse);
                 
                 // Find any waitlist entry for this event (approved or pending)
                 const userWaitlistForEvent = waitlistResponse.data.find(
                     wl => wl.event === id
                 );
 
-                console.log('Waitlist for this event:', userWaitlistForEvent);
-
                 if (!userWaitlistForEvent) {
-                    console.log('No waitlist entry found for this event');
                     // If waitlist data is empty
                     if (waitlistResponse.data.length === 0) {
                         setError('You do not have any waitlist entries for events.');
@@ -140,7 +128,6 @@ export default function EventWaitlistBookingPage() {
 
                 // Set pending demo flag if status is pending
                 if (userWaitlistForEvent.status === 'pending') {
-                    console.log('Using pending waitlist for demo mode');
                     setIsPendingDemo(true);
                 }
 
@@ -166,15 +153,12 @@ export default function EventWaitlistBookingPage() {
                     event: wt.event
                 }));
 
-                console.log('Formatted waitlist tickets:', formattedWaitlistTickets);
-
                 // Generate seat maps specifically for waitlist tickets
                 const waitlistSeats = generateSeatsFromTickets({
                     ...eventData,
                     tickets: formattedWaitlistTickets
                 });
 
-                console.log('Generated waitlist seats:', waitlistSeats.length);
                 setGeneratedSeats(waitlistSeats);
             } catch (err) {
                 console.error('Error fetching event details:', err);

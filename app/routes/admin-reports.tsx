@@ -184,6 +184,9 @@ function AdminReportContent() {
     setError(null);
     
     try {
+      // Load event data first
+      await loadPastEvents();
+      
       const token = localStorage.getItem('token');
       if (!token) {
         throw new Error('Token not found. Please login again.');
@@ -193,6 +196,7 @@ function AdminReportContent() {
       params.append('from', dateRange.from);
       params.append('to', dateRange.to);
       
+      // Dapatkan data utilization
       const response = await fetch(`/api/admin/auditorium/utilization?${params.toString()}`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -212,6 +216,60 @@ function AdminReportContent() {
       if (data.message && data.message.includes("Insufficient data")) {
         setUtilization([]);
       } else {
+        // Console log untuk debug
+        console.log('Utilization data received:', data.data);
+        
+        // Dapatkan semua ID event unik dari utilization data
+        const eventIds = new Set<string>();
+        if (data.data && Array.isArray(data.data)) {
+          data.data.forEach((item: UtilizationData) => {
+            if (item.events && Array.isArray(item.events)) {
+              item.events.forEach((eventId: string) => {
+                if (typeof eventId === 'string') {
+                  eventIds.add(eventId);
+                }
+              });
+            }
+          });
+        }
+        
+        console.log('Unique event IDs in utilization:', Array.from(eventIds));
+        console.log('Current pastEvents:', pastEvents.map(e => e._id));
+        
+        // Jika masih ada event IDs yang perlu dilengkapi, ambil dari API events
+        if (eventIds.size > 0) {
+          // Dapatkan event dari API events secara langsung
+          try {
+            const eventsEndpoint = `/api/events?ids=${Array.from(eventIds).join(',')}`;
+            console.log('Fetching specific events from:', eventsEndpoint);
+            
+            const eventsResponse = await fetch(eventsEndpoint, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            
+            if (eventsResponse.ok) {
+              const eventsData = await eventsResponse.json();
+              console.log('Events data from API:', eventsData);
+              
+              if (eventsData.data && Array.isArray(eventsData.data) && eventsData.data.length > 0) {
+                // Tambahkan event dari API ke pastEvents jika belum ada
+                const existingIds = new Set(pastEvents.map(e => e._id));
+                const newEvents = eventsData.data.filter((e: any) => !existingIds.has(e._id));
+                
+                if (newEvents.length > 0) {
+                  console.log('Adding new events from API:', newEvents.length);
+                  setPastEvents(prev => [...prev, ...newEvents]);
+                }
+              }
+            }
+          } catch (err) {
+            console.error('Error fetching additional events:', err);
+            // Tidak perlu menampilkan error ke user
+          }
+        }
+        
         setUtilization(data.data || []);
       }
     } catch (err: any) {
@@ -289,6 +347,41 @@ function AdminReportContent() {
     console.log(`Average utilization calculation: ${total} / ${utilizationData.length} = ${roundedAverage}%`);
     
     return roundedAverage;
+  };
+  
+  // Fungsi untuk mendapatkan nama event berdasarkan ID
+  const getEventNameById = (eventId: string): string => {
+    // Jika eventId tidak valid, kembalikan nilai default
+    if (!eventId) return 'Unknown Event';
+    
+    // Mencoba berbagai format ID untuk mencari event yang sesuai
+    const event = pastEvents.find(e => {
+      // Format standar: ID sama persis
+      if (e._id === eventId) return true;
+      
+      // Format string: ID sama persis setelah dikonversi ke string
+      if (e._id && e._id.toString() === eventId) return true;
+      
+      // Format alternatif: Jika memiliki id sebagai properti
+      // @ts-ignore - properti id mungkin ada jika dari API berbeda
+      if (e.id && (e.id === eventId || e.id.toString() === eventId)) return true;
+      
+      return false;
+    });
+    
+    // Jika event ditemukan, kembalikan namanya
+    if (event && event.name) {
+      return event.name;
+    }
+    
+    // Jika format event ID seperti ObjectId MongoDB (24 karakter hex)
+    if (typeof eventId === 'string' && eventId.match(/^[0-9a-f]{24}$/i)) {
+      // Return nama yang lebih user-friendly
+      return `Acara #${eventId.substring(0, 6)}`;
+    }
+    
+    // Jika format lain, kembalikan langsung
+    return eventId;
   };
   
   return (
@@ -630,7 +723,26 @@ function AdminReportContent() {
                                 </div>
                               </td>
                               <td className="px-4 py-3 text-sm text-gray-500">
-                                {item.events.length ? item.events.join(', ') : 'None'}
+                                {item.events && item.events.length > 0 
+                                  ? (
+                                    <div className="space-y-1">
+                                      {item.events.map((eventId, idx) => {
+                                        const eventName = getEventNameById(eventId);
+                                        const isOriginalId = eventName.startsWith('Acara #');
+                                        
+                                        return (
+                                          <div 
+                                            key={idx} 
+                                            className={`text-xs px-2 py-1 rounded ${isOriginalId ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}
+                                            title={eventId}
+                                          >
+                                            {eventName}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )
+                                  : 'None'}
                               </td>
                             </tr>
                           ))}

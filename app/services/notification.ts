@@ -60,7 +60,6 @@ const normalizeNotification = (notificationData: any): Notification => {
   if (eventId && typeof eventId === 'object') {
     // Jika eventId adalah objek, ambil properti id atau _id
     eventId = eventId._id || eventId.id || '';
-    console.log('Normalizing eventId from object:', notificationData.eventId, 'to string:', eventId);
   }
 
   return {

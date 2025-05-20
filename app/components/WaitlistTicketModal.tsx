@@ -125,9 +125,6 @@ export const WaitlistTicketModal: React.FC<WaitlistTicketModalProps> = ({ isOpen
         waitlistTickets: waitlistTickets
       };
       
-      // Log data yang akan dikirim ke server
-      console.log('Data tiket waitlist yang akan dibuat:', payload);
-      
       const response = await axios.post(
         `http://localhost:5000/api/events/${eventId}/waitlist-tickets`,
         payload,

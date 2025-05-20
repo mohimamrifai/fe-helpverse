@@ -98,9 +98,6 @@ export default function JoinWaitlistPage() {
 
                 // Check if event data exists in location state
                 const state = location.state as LocationState;
-                if (state && state.eventData) {
-                    console.log("Event data received from book page:", state.eventData);
-                }
 
                 const eventData = await eventService.getEventById(id);
                 setEvent(eventData);
@@ -178,14 +175,10 @@ export default function JoinWaitlistPage() {
                 event: id
             };
 
-            console.log("Sending waiting list data:", waitingListData);
-
             // Use waiting list service to register
             const result = await waitingListService.registerToWaitingList(waitingListData);
 
             // Handle success
-            console.log('Successfully registered to waiting list:', result);
-
             // Show success modal
             setModalData({
                 title: 'Registration Successful!',

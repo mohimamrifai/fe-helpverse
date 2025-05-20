@@ -52,11 +52,8 @@ export default function EventBookingPage() {
                     return;
                 }
 
-                console.log(`Fetching event details with ID: ${id}`);
-
                 // Get event data from API
                 const eventData = await eventService.getEventById(id);
-                console.log('Event data received:', eventData);
 
                 // Generate seats from ticket data
                 const seats = generateSeatsFromTickets(eventData);

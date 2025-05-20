@@ -37,17 +37,6 @@ export function NotificationPopover({
     };
   }, []);
 
-  // Log eventId for debugging
-  useEffect(() => {
-    if (notifications.length > 0) {
-      notifications.forEach(notification => {
-        if (notification.type === 'waitlist_ticket' && notification.eventId) {
-          console.log('EventId type:', typeof notification.eventId, 'Value:', notification.eventId);
-        }
-      });
-    }
-  }, [notifications]);
-
   // Deteksi klik di luar popover untuk menutup popover
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

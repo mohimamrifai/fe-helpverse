@@ -34,9 +34,6 @@ export function generateSeatsFromTickets(event: Event): GeneratedSeat[] {
         const seatId = `${row}${col}`;
         const numericRow = rowIndex + 1; // 1-based row number
 
-        // Log untuk debugging
-        console.log(`Creating seat: ${seatId}, numeric row: ${numericRow}, numeric column: ${col}`);
-
         // Check if seat is already booked
         const isBooked = ticket.bookedSeats?.some(bookedSeat => {
           // Check for different formats of booked seats

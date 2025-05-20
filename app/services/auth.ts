@@ -59,10 +59,6 @@ const API_URL = 'http://localhost:5000';
 // Function to get token from localStorage
 const getToken = () => {
   const token = localStorage.getItem('token');
-  console.log('🔐 getToken: Token exists:', !!token);
-  if (token) {
-    console.log('🔐 getToken: Token preview:', token.substring(0, 20) + '...');
-  }
   return token;
 };
 
@@ -79,10 +75,7 @@ api.interceptors.request.use(
   (config) => {
     const token = getToken();
     if (token) {
-      console.log(`🔐 Request to ${config.url}: Adding Authorization header with token`);
       config.headers.Authorization = `Bearer ${token}`;
-    } else {
-      console.log(`⚠️ Request to ${config.url}: No token available`);
     }
     return config;
   },
@@ -180,12 +173,7 @@ export const authService = {
         throw new Error('Semua field harus diisi');
       }
       
-      // Data sudah dalam format yang diharapkan server
-      console.log('Data yang dikirim ke API:', params);
-      
       const response = await api.post<AuthResponse>('/api/auth/register/event-organizer', params);
-      
-      console.log('API response:', response.data);
       
       // Periksa status code terlebih dahulu
       // Status 201 atau 200 menunjukkan operasi berhasil meskipun 'success' mungkin tidak ada
@@ -201,7 +189,6 @@ export const authService = {
         // Kasus khusus: saat admin mendaftarkan EO, server hanya mengembalikan success dan token
         // Dalam kasus ini, kita buat objek user dummy dengan data yang ada
         else if (response.data.success && response.data.token) {
-          console.log('Registrasi event organizer berhasil oleh admin, token diterima');
           // Buat objek user dummy dengan data yang dikirim ke API
           const dummyUser: User = {
             id: 'temp-eo-id',
@@ -239,12 +226,7 @@ export const authService = {
   // Fungsi untuk mendapatkan informasi user saat ini
   async getCurrentUser(): Promise<User> {
     try {
-      console.log('🔄 getCurrentUser: Fetching current user data...');
-      console.log('🔑 getCurrentUser: Token exists:', !!getToken());
-      
       const response = await api.get<AuthResponse>('/api/auth/me');
-      
-      console.log('✅ getCurrentUser: API response success:', response.data.success);
       
       if (response.data.success) {
         const normalizedUser = normalizeUser(response.data.data);
@@ -279,7 +261,6 @@ export const authService = {
 
   // Fungsi untuk menghapus semua data autentikasi yang tersimpan
   clearStoredAuthData(): void {
-    console.log('Clearing all stored authentication data');
     localStorage.removeItem('token');
     localStorage.removeItem('userData');
     // Tambahkan item lain terkait auth jika ada

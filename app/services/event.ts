@@ -275,17 +275,14 @@ export const eventService = {
   // Fungsi untuk mengambil detail event berdasarkan ID
   async getEventById(id: string): Promise<Event> {
     try {
-      console.log(`Memanggil API untuk event dengan ID: ${id}`);
-      const response = await api.get(`/api/events/${id}`);
+      const response = await api.get<{success: boolean, data: any}>(`/api/events/${id}`);
       
       if (response.data.success) {
+        // Simpan data asli
         const eventData = response.data.data;
-        console.log('Data acara dari API:', JSON.stringify(eventData, null, 2));
         
         // Jika tidak ada seatArrangement atau seats array kosong, buat data dummy
         if (!eventData.seatArrangement || !eventData.seatArrangement.seats || eventData.seatArrangement.seats.length === 0) {
-          console.log('Membuat data tempat duduk dummy berdasarkan dokumentasi API');
-          
           // Tentukan jumlah baris dan kolom berdasarkan ticket types
           let totalRows = 0;
           let totalColumns = 0;
@@ -302,8 +299,6 @@ export const eventService = {
               const priceB = typeof b.price === 'string' ? parseFloat(b.price) : (b.price || 0);
               return priceB - priceA;
             });
-            
-            console.log('Tiket diurutkan berdasarkan harga:', sortedTickets);
             
             // Kelompokkan tiket ke kategori
             const vvipTickets = sortedTickets.filter(ticket => 
@@ -394,15 +389,11 @@ export const eventService = {
               eventData.seatArrangement.columns = totalColumns;
               eventData.seatArrangement.seats = dummySeats;
             }
-            
-            console.log(`Membuat ${dummySeats.length} kursi dummy untuk ${ticketCategories.filter(c => c.tickets.length > 0).length} kategori tiket`);
           } else {
             // Fallback jika tidak ada ticketTypes
             // Gunakan rows dan columns dari dokumentasi jika tidak ada
             const rows = eventData.seatArrangement?.rows || 10;
             const columns = eventData.seatArrangement?.columns || 10;
-            
-            console.log(`Menggunakan rows=${rows}, columns=${columns} sesuai dengan API`);
             
             // Buat array kursi dummy berdasarkan rows dan columns
             const dummySeats = [];
@@ -438,13 +429,9 @@ export const eventService = {
               // Jika ada tapi seats array kosong, isi dengan data dummy
               eventData.seatArrangement.seats = dummySeats;
             }
-            
-            console.log(`Membuat ${dummySeats.length} kursi dummy untuk testing`);
           }
         } else {
           // Jika sudah ada data seats, pastikan formatnya sesuai dengan dokumentasi API
-          console.log('Menggunakan data tempat duduk dari API');
-          
           // Tambahkan ticketTypeId ke setiap kursi jika belum ada, berdasarkan kategori harga
           if (((eventData.tickets && eventData.tickets.length > 0) || 
                (eventData.ticketTypes && eventData.ticketTypes.length > 0)) && 
@@ -519,8 +506,6 @@ export const eventService = {
           if (eventData.seatArrangement.seats.some((seat: any) => 
               !seat.id || 
               (seat.status !== 'available' && seat.status !== 'reserved' && seat.status !== 'selected'))) {
-            console.log('Memformat ulang data kursi agar sesuai dengan dokumentasi API');
-            
             // Perbaiki format data kursi jika diperlukan
             eventData.seatArrangement.seats = eventData.seatArrangement.seats.map((seat: any) => ({
               id: seat.id || `unknown-${Math.random().toString(36).substring(2, 8)}`,
@@ -534,15 +519,12 @@ export const eventService = {
           }
         }
         
-        // Normalize event data setelah penyesuaian
         return normalizeEvent(eventData);
       }
       
-      throw new Error(response.data.message || 'Gagal mengambil detail acara');
+      throw new Error('Failed to fetch event');
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response) {
-        throw new Error(error.response.data.message || 'Gagal mengambil detail acara');
-      }
+      console.error('Error fetching event:', error);
       throw error;
     }
   },
@@ -550,7 +532,7 @@ export const eventService = {
   // Fungsi untuk membuat event baru (hanya event organizer)
   async createEvent(eventData: Omit<Event, 'id' | '_id'>): Promise<Event> {
     try {
-      // Buat FormData
+      // Format data untuk dikirim ke server
       const formData = new FormData();
       
       // Cast image ke any dulu untuk menggunakan instanceof
@@ -587,18 +569,18 @@ export const eventService = {
         }
       });
       
-      // Log data yang akan dikirim untuk debugging
-      console.log('FormData fields being sent:');
-      for (const pair of (formData as any).entries()) {
-        // Jika ini adalah ticket atau promotionalOffers yang sudah di-stringify
-        if (pair[0] === 'tickets' || pair[0] === 'promotionalOffers') {
+      // Untuk debugging, lihat isi form data
+      for (const pair of formData.entries()) {
+        if (typeof pair[1] === 'string' && (
+          pair[1].startsWith('{') || pair[1].startsWith('[')
+        )) {
           try {
-            console.log(pair[0], 'parsed value:', JSON.parse(pair[1]));
+            // Coba parse JSON
           } catch (e) {
-            console.log(pair[0], pair[1]);
+            // Jika bukan JSON valid
           }
         } else {
-          console.log(pair[0], pair[1]);
+          // Tipe data lain (File, dll)
         }
       }
       
@@ -614,11 +596,11 @@ export const eventService = {
         return normalizeEvent(response.data.data);
       }
       
-      throw new Error(response.data.message || 'Failed to create event');
+      throw new Error(response.data.message || 'Gagal membuat acara');
     } catch (error) {
-      console.error('Error detail:', error);
+      console.error('Error creating event:', error);
       if (axios.isAxiosError(error) && error.response) {
-        throw new Error(error.response.data.message || error.response.data.error || 'Failed to create event');
+        throw new Error(error.response.data.message || 'Gagal membuat acara');
       }
       throw error;
     }

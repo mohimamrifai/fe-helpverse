@@ -40,10 +40,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Function for refreshing user data from server
   const refreshUserData = async (): Promise<User> => {
     try {
-      console.log('Refreshing user data...');
       setLoading(true);
       const userData = await authService.getCurrentUser();
-      console.log('User data refreshed:', userData);
       setUser(userData);
       return userData;
     } catch (err) {
@@ -61,19 +59,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        console.log('Initializing auth...');
         if (authService.isAuthenticated()) {
-          console.log('Token exists, fetching user data...');
           try {
             const userData = await authService.getCurrentUser();
-            console.log('User data received:', userData);
             setUser(userData);
           } catch (fetchErr) {
             console.error('Error fetching user data:', fetchErr);
             
             // Jika gagal memvalidasi token, anggap user tidak terautentikasi
             // dan hapus token serta data user yang tersimpan
-            console.log('Validation failed, clearing user data and token');
             setUser(null);
             authService.clearStoredAuthData();
             setError('Session expired. Please login again.');
@@ -97,9 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true);
       setError(null);
-      console.log('Logging in...');
       const userData = await authService.login({ username, password, rememberMe });
-      console.log('Login successful, user data:', userData);
       setUser(userData);
     } catch (err) {
       console.error('Login error:', err);
@@ -126,7 +118,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ...data,
         role: 'user'
       });
-      console.log('User registration successful, user data:', userData);
       setUser(userData);
     } catch (err) {
       console.error('Registration error:', err);
@@ -153,7 +144,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ...data,
         role: 'eventOrganizer'
       });
-      console.log('Registration successful, user data:', userData);
       return userData;
     } catch (err) {
       console.error('Registration error:', err);

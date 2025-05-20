@@ -107,8 +107,6 @@ export const waitingListService = {
       if (!token) {
         throw new Error('You must be logged in first');
       }
-
-      console.log(`Fetching waitlist with token for email: ${email}`);
       
       const response = await fetch(`${API_URL}/api/waiting-list?email=${encodeURIComponent(email)}`, {
         headers: {
@@ -205,8 +203,6 @@ export const waitingListService = {
    */
   async getEventWaitlistTickets(eventId: string): Promise<WaitlistTicketResponse> {
     try {
-      console.log('Mengambil tiket waitlist untuk event dengan ID:', eventId);
-      
       // Menggunakan endpoint yang sesuai dengan dokumentasi API
       const response = await fetch(`${API_URL}/api/events/${eventId}/waitlist-tickets`);
       
@@ -216,7 +212,6 @@ export const waitingListService = {
       }
       
       const data = await response.json();
-      console.log('Waitlist tickets data:', data);
       return data;
     } catch (error) {
       console.error('Error fetching waitlist tickets:', error);

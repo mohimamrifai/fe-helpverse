@@ -98,8 +98,6 @@ export default function MyWaitlistPage(): React.ReactElement {
         return;
       }
 
-      console.log('Fetching waitlist for user email:', userEmail);
-
       // Add email parameter according to API documentation
       const response = await axios.get(`${API_URL}?email=${encodeURIComponent(userEmail)}`, {
         headers: {
@@ -108,33 +106,12 @@ export default function MyWaitlistPage(): React.ReactElement {
         }
       });
       
-      console.log('Waitlist API response:', response.data);
-      
-      // Log struktur data yang diterima untuk debugging
-      if (response.data && response.data.data && response.data.data.length > 0) {
-        console.log('First item structure:', JSON.stringify(response.data.data[0], null, 2));
-        
-        // Check specifically for event title properties
-        const firstEvent = response.data.data[0].event;
-        if (firstEvent) {
-          console.log('Event properties:', {
-            hasTitle: 'title' in firstEvent,
-            titleValue: firstEvent.title,
-            hasName: 'name' in firstEvent,
-            nameValue: firstEvent.name
-          });
-        }
-      }
-      
       if (response.data.success && Array.isArray(response.data.data)) {
         // Validasi dan normalisasi data sebelum di-set ke state
         const validatedItems = response.data.data
           // Filter out items with status 'orderCompleted' OR orderCompleted: true
           .filter((item: any) => item.status !== 'orderCompleted' && item.orderCompleted !== true)
           .map((item: any) => {
-            // Log untuk debugging
-            console.log('Processing event data:', item.event);
-            
             return {
               _id: item._id || '',
               name: item.name || '',
@@ -163,7 +140,6 @@ export default function MyWaitlistPage(): React.ReactElement {
             };
           });
         
-        console.log('Validated waitlist items (after filtering orderCompleted):', validatedItems);
         setWaitlistItems(validatedItems);
       } else {
         setWaitlistItems([]);
@@ -249,8 +225,6 @@ export default function MyWaitlistPage(): React.ReactElement {
         },
         data: { email: userEmail } // Axios menggunakan property 'data' untuk body pada request DELETE
       });
-
-      console.log('Delete waiting list response:', response.data);
 
       if (response.data.success) {
         // Remove item from state
