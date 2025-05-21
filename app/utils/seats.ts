@@ -16,6 +16,7 @@ export function generateSeatsFromTickets(event: Event): GeneratedSeat[] {
     if (!ticket.seatArrangement) return;
 
     const { rows, columns } = ticket.seatArrangement;
+    const lastRowColumns = ticket.seatArrangement.lastRowColumns || columns;
     
     // Use letters for rows (A, B, C, ...)
     const rowLabels = Array.from({ length: rows }, (_, i) => 
@@ -30,7 +31,11 @@ export function generateSeatsFromTickets(event: Event): GeneratedSeat[] {
 
     // For each row and column, create a seat
     rowLabels.forEach((row, rowIndex) => {
-      for (let col = 1; col <= columns; col++) {
+      // Tentukan jumlah kolom untuk baris ini
+      const isLastRow = rowIndex === rows - 1;
+      const columnsForThisRow = isLastRow ? lastRowColumns : columns;
+      
+      for (let col = 1; col <= columnsForThisRow; col++) {
         const seatId = `${row}${col}`;
         const numericRow = rowIndex + 1; // 1-based row number
 

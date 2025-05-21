@@ -61,6 +61,7 @@ function ReportPageContent() {
   const [tableData, setTableData] = useState<TableData[]>([]);
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [showTable, setShowTable] = useState<boolean>(false);
+  const [noDataMessage, setNoDataMessage] = useState<string | null>(null);
 
   // Colors untuk charts
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
@@ -437,15 +438,58 @@ function ReportPageContent() {
     loadReport();
   }, [reportType, selectedDate]);
   
+  // Fungsi untuk mengecek apakah tanggal yang dipilih ada di masa depan
+  const isFutureDate = (dateToCheck: string, reportType: string): boolean => {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1; // Bulan dimulai dari 0
+    const currentDay = today.getDate();
+    
+    // Parse tanggal yang dipilih
+    const selectedDateObj = new Date(dateToCheck);
+    const selectedYear = selectedDateObj.getFullYear();
+    const selectedMonth = selectedDateObj.getMonth() + 1;
+    const selectedDay = selectedDateObj.getDate();
+    
+    // Cek berdasarkan tipe report
+    if (reportType === "daily") {
+      // Tanggal di masa depan
+      return selectedDateObj > today;
+    } else if (reportType === "monthly") {
+      // Bulan di masa depan dalam tahun yang sama
+      if (selectedYear === currentYear) {
+        return selectedMonth > currentMonth;
+      }
+      // Tahun di masa depan
+      return selectedYear > currentYear;
+    }
+    
+    // Default return false untuk tipe "weekly" atau "all"
+    return false;
+  };
+
   // Fungsi untuk memuat report berdasarkan filter
   const loadReport = async () => {
     setLoading(true);
     setError(null);
+    setNoDataMessage(null);
     
     try {
       const token = localStorage.getItem('token');
       if (!token) {
         throw new Error('Token not found. Please login again.');
+      }
+      
+      // Periksa jika tanggal yang dipilih ada di masa depan
+      if (reportType !== 'all' && reportType !== 'weekly') {
+        const formattedDate = selectedDate.split('T')[0];
+        if (isFutureDate(formattedDate, reportType)) {
+          setNoDataMessage("No data available for future dates. Please select a different date or month.");
+          setReport(null);
+          setTableData([]);
+          setLoading(false);
+          return;
+        }
       }
       
       // Jika memilih tipe 'all', gunakan endpoint /api/reports/all
@@ -484,9 +528,11 @@ function ReportPageContent() {
       
       const data = await response.json();
       
-      // Jika tidak ada data untuk filter, coba ambil data dari /api/reports/all
+      // Jika tidak ada data untuk filter, tampilkan pesan no data
       if (data.message && data.message.includes("Insufficient data")) {
-        await loadAllReports();
+        setNoDataMessage("No data available for the selected date. Please choose another date or time period.");
+        setReport(null);
+        setTableData([]);
         return;
       }
       
@@ -496,14 +542,10 @@ function ReportPageContent() {
     } catch (err: any) {
       console.error('Failed to load report:', err);
       
-      // Jika gagal, coba ambil data dari /api/reports/all
-      try {
-        await loadAllReports();
-      } catch (fallbackError) {
-        setError(err.message || 'Failed to load report data. Please try again.');
-        setReport(null);
-        setTableData([]);
-      }
+      // Set pesan error
+      setError(err.message || 'Failed to load report data. Please try again.');
+      setReport(null);
+      setTableData([]);
     } finally {
       setLoading(false);
     }
@@ -512,10 +554,19 @@ function ReportPageContent() {
   // Format data untuk tabel berdasarkan tipe report
   const processReportData = (data: any) => {
     // Jika tidak ada data
-    if (data.message && data.message.includes("Insufficient data")) {
+    if (data.message && (data.message.includes("Insufficient data") || data.message.includes("No data"))) {
+      setNoDataMessage("No data available for the selected date. Please choose another date or time period.");
+      setReport(null);
+      setTableData([]);
+    } else if (data.ticketsSold === 0 && data.revenue === 0 && (data.salesData?.length === 0 || !data.salesData)) {
+      // Jika data kosong (tidak ada penjualan)
+      setNoDataMessage("No sales data found for the selected period. Please select a different date range.");
       setReport(null);
       setTableData([]);
     } else {
+      // Reset pesan no data
+      setNoDataMessage(null);
+      
       // Cek apakah ini data dari /api/reports/all
       if (data.totalOrders !== undefined && data.ordersData) {
         // Format data dari /api/reports/all
@@ -671,7 +722,7 @@ function ReportPageContent() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-secondary">
       <Navbar />
       <div className="flex-grow container mx-auto px-4 py-6 mt-20">
         {/* Header dengan judul dan action buttons */}
@@ -754,14 +805,14 @@ function ReportPageContent() {
         )}
         
         {/* No data message */}
-        {!loading && !error && !report && (
+        {!loading && !error && (noDataMessage || !report) && (
           <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 p-4 mb-4 rounded-lg flex items-center justify-center shadow-sm">
             <div className="flex flex-col items-center text-center">
               <svg className="w-8 h-8 mb-3 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
               </svg>
-              <p className="text-sm font-medium">Tidak ada data untuk periode yang dipilih</p>
-              <p className="mt-1 text-xs">Silakan pilih rentang tanggal atau tambahkan event baru</p>
+              <p className="text-sm font-medium">{noDataMessage || "No data available for the selected period"}</p>
+              <p className="mt-1 text-xs">Please select a different date or time period</p>
             </div>
           </div>
         )}

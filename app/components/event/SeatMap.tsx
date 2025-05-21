@@ -166,8 +166,13 @@ export default function SeatMap({ tickets, generatedSeats, selectedSeats, onSeat
               <span>{ticketName} - {formatRinggit(ticket.price)}</span>
             </div>
 
-            {rowLabels.map(rowLabel => {
+            {rowLabels.map((rowLabel, rowIndex) => {
               const rowSeats = ticketSeats[rowLabel];
+              // Tentukan jumlah kolom yang harus ditampilkan berdasarkan baris
+              const isLastRow = rowIndex === rowLabels.length - 1;
+              const columnsToShow = isLastRow && ticket.seatArrangement?.lastRowColumns 
+                ? ticket.seatArrangement.lastRowColumns 
+                : ticket.seatArrangement?.columns || 10;
 
               return (
                 <div className="flex items-center justify-center my-1.5" key={`${ticketId}-${rowLabel}`}>
@@ -175,8 +180,8 @@ export default function SeatMap({ tickets, generatedSeats, selectedSeats, onSeat
                     {rowLabel}
                   </div>
                   <div className="flex flex-wrap justify-center">
-                    {/* Create a grid with all seats from column 1 to max column */}
-                    {Array.from({ length: ticket.seatArrangement?.columns || 10 }).map((_, index) => {
+                    {/* Create a grid with seats according to the calculated columns for this row */}
+                    {Array.from({ length: columnsToShow }).map((_, index) => {
                       const columnNumber = index + 1;
                       const seatForThisPosition = rowSeats.find(seat => parseInt(seat.column) === columnNumber);
                       

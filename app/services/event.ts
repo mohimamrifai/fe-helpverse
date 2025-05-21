@@ -38,6 +38,7 @@ export interface Ticket {  // Diubah nama dari TicketType menjadi Ticket
   seatArrangement?: {
     rows: number;
     columns: number;
+    lastRowColumns?: number; // Jumlah kolom di baris terakhir (jika tidak penuh)
   };
   bookedSeats?: BookedSeat[]; // Ditambahkan sesuai dokumentasi
 }
@@ -53,6 +54,7 @@ export interface BookedSeat {
 export interface SeatArrangement {
   rows: number;
   columns: number;
+  lastRowColumns?: number; // Jumlah kolom di baris terakhir (jika tidak penuh)
   seats: SeatInfo[];
 }
 
@@ -170,6 +172,7 @@ const normalizeEvent = (eventData: any): Event => {
       seatArrangement: {
         rows: ticket.rows || (ticket.seatArrangement?.rows || 0),
         columns: ticket.columns || (ticket.seatArrangement?.columns || 0),
+        lastRowColumns: ticket.lastRowColumns || ticket.seatArrangement?.lastRowColumns
       },
       bookedSeats: Array.isArray(ticket.bookedSeats) ? ticket.bookedSeats : []
     };
@@ -180,6 +183,7 @@ const normalizeEvent = (eventData: any): Event => {
     ? {
         rows: eventData.seatArrangement.rows,
         columns: eventData.seatArrangement.columns,
+        lastRowColumns: eventData.seatArrangement.lastRowColumns,
         seats: Array.isArray(eventData.seatArrangement.seats) 
           ? eventData.seatArrangement.seats.map((seat: any) => {
               const result = {

@@ -138,20 +138,31 @@ export default function EventWaitlistBookingPage() {
                 setIsPendingDemo(true);
 
                 // Format waitlist tickets to be compatible with SeatMap
-                const formattedWaitlistTickets: Ticket[] = waitlistTicketsResponse.data.map((wt: WaitlistTicket) => ({
-                    _id: wt._id,
-                    id: wt._id, // Add required id field
-                    name: wt.name,
-                    description: wt.description,
-                    price: wt.price,
-                    quantity: wt.quantity,
-                    seatArrangement: {
-                        rows: Math.max(1, Math.ceil(wt.quantity / 10)),  // Calculate rows based on quantity
-                        columns: 10
-                    },
-                    bookedSeats: [],  // Assume all seats are available for waitlist
-                    event: wt.event
-                }));
+                const formattedWaitlistTickets: Ticket[] = waitlistTicketsResponse.data.map((wt: WaitlistTicket) => {
+                    // Hitung jumlah kolom dan baris secara dinamis
+                    // Maksimal 10 kursi per baris
+                    const maxColumns = 10;
+                    const totalSeats = wt.quantity;
+                    const rows = Math.ceil(totalSeats / maxColumns);
+                    // Perhitungan kolom hanya untuk baris terakhir yang mungkin tidak penuh
+                    const lastRowColumns = totalSeats % maxColumns || maxColumns;
+
+                    return {
+                        _id: wt._id,
+                        id: wt._id, // Add required id field
+                        name: wt.name,
+                        description: wt.description,
+                        price: wt.price,
+                        quantity: wt.quantity,
+                        seatArrangement: {
+                            rows: rows,
+                            columns: maxColumns,
+                            lastRowColumns: lastRowColumns // Tambahkan informasi kolom di baris terakhir
+                        },
+                        bookedSeats: [],  // Assume all seats are available for waitlist
+                        event: wt.event
+                    }
+                });
 
                 // Generate seat maps specifically for waitlist tickets
                 const waitlistSeats = generateSeatsFromTickets({
@@ -282,19 +293,30 @@ export default function EventWaitlistBookingPage() {
                     <div className="bg-gray-200 rounded-lg p-2 md:p-4 w-full md:w-[70%] overflow-x-auto">
                         {generatedSeats.length > 0 ? (
                             <SeatMap
-                                tickets={waitlistTickets.map(wt => ({
-                                    _id: wt._id,
-                                    id: wt._id,
-                                    name: wt.name,
-                                    description: wt.description,
-                                    price: wt.price,
-                                    quantity: wt.quantity,
-                                    seatArrangement: {
-                                        rows: Math.max(1, Math.ceil(wt.quantity / 10)),
-                                        columns: 10
-                                    },
-                                    bookedSeats: []
-                                }))}
+                                tickets={waitlistTickets.map(wt => {
+                                    // Hitung jumlah kolom dan baris secara dinamis
+                                    // Maksimal 10 kursi per baris
+                                    const maxColumns = 10;
+                                    const totalSeats = wt.quantity;
+                                    const rows = Math.ceil(totalSeats / maxColumns);
+                                    // Perhitungan kolom hanya untuk baris terakhir yang mungkin tidak penuh
+                                    const lastRowColumns = totalSeats % maxColumns || maxColumns;
+
+                                    return {
+                                        _id: wt._id,
+                                        id: wt._id,
+                                        name: wt.name,
+                                        description: wt.description,
+                                        price: wt.price,
+                                        quantity: wt.quantity,
+                                        seatArrangement: {
+                                            rows: rows,
+                                            columns: maxColumns,
+                                            lastRowColumns: lastRowColumns // Tambahkan informasi kolom di baris terakhir
+                                        },
+                                        bookedSeats: []
+                                    }
+                                })}
                                 generatedSeats={generatedSeats}
                                 selectedSeats={selectedSeats}
                                 onSeatClick={handleSeatClick}
