@@ -168,8 +168,22 @@ function AdminReportContent() {
       if (data.message && data.message.includes("Insufficient data")) {
         setPastEvents([]);
       } else {
-        // Gunakan data API langsung tanpa memodifikasi
-        setPastEvents(data.data || []);
+        // Periksa untuk memastikan hanya menampilkan event yang telah selesai (past events)
+        // dan memiliki data occupancy yang valid
+        const filteredEvents = data.data ? data.data.filter((event: PastEvent) => {
+          // Pastikan event memiliki data usage yang valid
+          const hasValidOccupancy = typeof event.occupancy === 'number';
+          const hasValidUsageHours = typeof event.usageHours === 'number' && event.usageHours > 0;
+          
+          // Pastikan tanggal event sudah lewat
+          const eventDate = new Date(event.date);
+          const today = new Date();
+          const isPastEvent = eventDate < today;
+          
+          return isPastEvent && hasValidOccupancy && hasValidUsageHours;
+        }) : [];
+        
+        setPastEvents(filteredEvents || []);
       }
     } catch (err: any) {
       console.error('Failed to load past events:', err);
@@ -220,10 +234,29 @@ function AdminReportContent() {
         // Console log untuk debug
         console.log('Utilization data received:', data.data);
         
+        // Filter utilization data untuk hanya menyertakan data yang valid
+        const filteredUtilization = data.data ? data.data.filter((item: UtilizationData) => {
+          // Pastikan data utilization valid
+          const hasValidData = 
+            typeof item.total_hours_used === 'number' && 
+            typeof item.total_hours_available === 'number' && 
+            typeof item.utilization_percentage === 'number';
+          
+          // Pastikan item memiliki data penggunaan yang nyata
+          const hasRealUsage = item.total_hours_used > 0;
+          
+          // Pastikan tanggal sudah lewat
+          const itemDate = new Date(item.date);
+          const today = new Date();
+          const isPastDate = itemDate < today;
+          
+          return hasValidData && hasRealUsage && isPastDate;
+        }) : [];
+        
         // Dapatkan semua ID event unik dari utilization data
         const eventIds = new Set<string>();
-        if (data.data && Array.isArray(data.data)) {
-          data.data.forEach((item: UtilizationData) => {
+        if (filteredUtilization && Array.isArray(filteredUtilization)) {
+          filteredUtilization.forEach((item: UtilizationData) => {
             if (item.events && Array.isArray(item.events)) {
               item.events.forEach((eventId: string) => {
                 if (typeof eventId === 'string') {
@@ -255,9 +288,16 @@ function AdminReportContent() {
               console.log('Events data from API:', eventsData);
               
               if (eventsData.data && Array.isArray(eventsData.data) && eventsData.data.length > 0) {
+                // Filter event yang valid (sudah terlaksana) dari API response
+                const validEvents = eventsData.data.filter((e: any) => {
+                  const eventDate = new Date(e.date);
+                  const today = new Date();
+                  return eventDate < today;
+                });
+                
                 // Tambahkan event dari API ke pastEvents jika belum ada
                 const existingIds = new Set(pastEvents.map(e => e._id));
-                const newEvents = eventsData.data.filter((e: any) => !existingIds.has(e._id));
+                const newEvents = validEvents.filter((e: any) => !existingIds.has(e._id));
                 
                 if (newEvents.length > 0) {
                   console.log('Adding new events from API:', newEvents.length);
@@ -271,7 +311,7 @@ function AdminReportContent() {
           }
         }
         
-        setUtilization(data.data || []);
+        setUtilization(filteredUtilization || []);
       }
     } catch (err: any) {
       console.error('Failed to load utilization:', err);

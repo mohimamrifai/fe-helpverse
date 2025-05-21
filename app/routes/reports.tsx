@@ -127,17 +127,29 @@ function ReportPageContent() {
   // Fungsi untuk memuat data event milik event organizer
   const loadEvents = async () => {
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Token not found. Please login again.');
+      }
+      
+      console.log('Loading events data...');
+      
       const response = await fetch('/api/events/my-events', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         }
       });
       
       if (!response.ok) {
-        throw new Error('Failed to load events');
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || `Error ${response.status}: ${response.statusText}`);
       }
       
       const data = await response.json();
+      
+      console.log('Events data received:', data);
       
       // Menyimpan data event untuk dropdown
       if (data.data && Array.isArray(data.data)) {
@@ -146,11 +158,18 @@ function ReportPageContent() {
           name: event.name
         }));
         
+        console.log('Parsed event options:', eventOptions);
+        
         // Tambahkan opsi "All Events" di awal
         setEvents([{ id: "all", name: "All Events" }, ...eventOptions]);
+      } else {
+        console.warn('No event data found or invalid format:', data);
+        setEvents([{ id: "all", name: "All Events" }]);
       }
-    } catch (err) {
-      setError('Failed to load events.');
+    } catch (err: any) {
+      console.error('Failed to load events:', err);
+      setError(`Failed to load events: ${err.message}`);
+      setEvents([{ id: "all", name: "All Events" }]);
     }
   };
 
@@ -175,6 +194,7 @@ function ReportPageContent() {
   const loadAllReports = async () => {
     setLoading(true);
     setError(null);
+    setNoDataMessage(null);
     
     try {
       const token = localStorage.getItem('token');
@@ -537,6 +557,8 @@ function ReportPageContent() {
         params.append('eventId', selectedEvent);
       }
       
+      console.log(`Loading report with params: ${params.toString()}, URL: /api/reports/${reportType}?${params.toString()}`);
+      
       // Buat fetch request
       const response = await fetch(`/api/reports/${reportType}?${params.toString()}`, {
         method: 'GET',
@@ -583,56 +605,66 @@ function ReportPageContent() {
 
   // Format data untuk tabel berdasarkan tipe report
   const processReportData = (data: any) => {
-    // Jika tidak ada data
-    if (data.message && (data.message.includes("Insufficient data") || data.message.includes("No data"))) {
+    console.log('Processing report data:', data);
+    
+    // Jika tidak ada data atau error message
+    if (!data || (data.message && (data.message.includes("Insufficient data") || data.message.includes("No data")))) {
       setNoDataMessage("No data available for the selected date. Please choose another date or time period.");
       setReport(null);
       setTableData([]);
-    } else if (data.ticketsSold === 0 && data.revenue === 0 && (data.salesData?.length === 0 || !data.salesData)) {
-      // Jika data kosong (tidak ada penjualan)
+      return;
+    }
+    
+    // Jika data kosong (tidak ada penjualan)
+    if ((data.ticketsSold === 0 || data.ticketsSold === undefined) && 
+        (data.revenue === 0 || data.revenue === undefined) && 
+        (!data.salesData || data.salesData?.length === 0)) {
       setNoDataMessage("No sales data found for the selected period. Please select a different date range.");
       setReport(null);
       setTableData([]);
-    } else {
-      // Reset pesan no data
-      setNoDataMessage(null);
+      return;
+    }
+    
+    // Reset pesan no data jika ada data
+    setNoDataMessage(null);
+    
+    // Cek apakah ini data dari /api/reports/all
+    if (data.totalOrders !== undefined && data.ordersData) {
+      // Format data dari /api/reports/all
+      const allReportData = {
+        ticketsSold: data.ticketsSold || 0,
+        revenue: data.revenue || 0,
+        occupancyPercentage: data.occupancyPercentage || 0,
+        // Buat data salesData dari ordersData berdasarkan tanggal
+        salesData: Object.keys(data.ordersByDate || {}).map(date => ({
+          day: date,
+          count: data.ordersByDate[date]?.length || 0
+        })),
+        // Buat data revenueData dari ordersData berdasarkan tanggal
+        revenueData: Object.keys(data.ordersByDate || {}).map(date => ({
+          day: date,
+          amount: (data.ordersByDate[date] || []).reduce((sum: number, order: any) => sum + (order.totalAmount || 0), 0)
+        })),
+        // Tambahkan occupancyData berdasarkan tanggal (jika tersedia)
+        occupancyData: data.occupancyByDate ? Object.keys(data.occupancyByDate || {}).map(date => ({
+          day: date,
+          percentage: data.occupancyByDate[date] || data.occupancyPercentage || 0
+        })) : []
+      };
       
-      // Cek apakah ini data dari /api/reports/all
-      if (data.totalOrders !== undefined && data.ordersData) {
-        // Format data dari /api/reports/all
-        const allReportData = {
-          ticketsSold: data.ticketsSold,
-          revenue: data.revenue,
-          occupancyPercentage: data.occupancyPercentage,
-          // Buat data salesData dari ordersData berdasarkan tanggal
-          salesData: Object.keys(data.ordersByDate || {}).map(date => ({
-            day: date,
-            count: data.ordersByDate[date].length
-          })),
-          // Buat data revenueData dari ordersData berdasarkan tanggal
-          revenueData: Object.keys(data.ordersByDate || {}).map(date => ({
-            day: date,
-            amount: (data.ordersByDate[date] || []).reduce((sum: number, order: any) => sum + (order.totalAmount || 0), 0)
-          })),
-          // Tambahkan occupancyData berdasarkan tanggal (jika tersedia)
-          occupancyData: data.occupancyByDate ? Object.keys(data.occupancyByDate || {}).map(date => ({
-            day: date,
-            percentage: data.occupancyByDate[date] || data.occupancyPercentage
-          })) : []
-        };
-        
-        // Set sebagai weekly report untuk tampilan
-        setReport({
-          startDate: allReportData.salesData.length > 0 ? allReportData.salesData[0].day : "",
-          endDate: allReportData.salesData.length > 0 ? allReportData.salesData[allReportData.salesData.length - 1].day : "",
-          ticketsSold: allReportData.ticketsSold,
-          revenue: allReportData.revenue,
-          occupancyPercentage: allReportData.occupancyPercentage,
-          salesData: allReportData.salesData,
-          revenueData: allReportData.revenueData
-        } as WeeklyReport);
-        
-        // Buat data tabel dari sales data
+      // Set sebagai weekly report untuk tampilan
+      setReport({
+        startDate: allReportData.salesData.length > 0 ? allReportData.salesData[0].day : "All Time",
+        endDate: allReportData.salesData.length > 0 ? allReportData.salesData[allReportData.salesData.length - 1].day : "Report",
+        ticketsSold: allReportData.ticketsSold,
+        revenue: allReportData.revenue,
+        occupancyPercentage: allReportData.occupancyPercentage || 0,
+        salesData: allReportData.salesData,
+        revenueData: allReportData.revenueData
+      } as WeeklyReport);
+      
+      // Buat data tabel dari sales data
+      if (allReportData.salesData.length > 0) {
         const tableRows = allReportData.salesData.map((item, index) => {
           // Cari occupancy untuk tanggal ini jika tersedia
           const dateOccupancy = allReportData.occupancyData && allReportData.occupancyData.length > 0
@@ -640,7 +672,7 @@ function ReportPageContent() {
             : null;
             
           // Jika tidak ada tiket terjual, set persentase kursi terisi menjadi 0
-          const seatsFilledPercent = item.count === 0 ? 0 : formatPercentage(dateOccupancy || data.occupancyPercentage);
+          const seatsFilledPercent = item.count === 0 ? 0 : formatPercentage(dateOccupancy || data.occupancyPercentage || 0);
           
           return {
             id: index.toString(),
@@ -650,65 +682,112 @@ function ReportPageContent() {
             seatsFilledPercent: seatsFilledPercent
           };
         });
-        
         setTableData(tableRows);
       } else {
-        // Proses untuk format report normal
-        setReport(data);
+        // Fallback jika tidak ada data tanggal
+        setTableData([{
+          id: "1",
+          date: "All Time",
+          ticketsSold: allReportData.ticketsSold,
+          revenue: allReportData.revenue,
+          seatsFilledPercent: allReportData.ticketsSold === 0 ? 0 : formatPercentage(allReportData.occupancyPercentage || 0)
+        }]);
+      }
+    } else {
+      console.log('Processing standard report format', reportType);
+      
+      // Pastikan data tersedia sebelum memproses
+      if (!data.ticketsSold && !data.revenue && !data.occupancyPercentage) {
+        console.warn('Invalid report data format:', data);
+        setNoDataMessage("No valid data available. Please try different filters.");
+        setReport(null);
+        setTableData([]);
+        return;
+      }
+      
+      // Proses untuk format report normal
+      setReport(data);
+      
+      if (reportType === "daily") {
+        const dailyData = data as DailyReport;
+        setTableData([{
+          id: "1",
+          date: dailyData.date,
+          ticketsSold: dailyData.ticketsSold || 0,
+          revenue: dailyData.revenue || 0,
+          seatsFilledPercent: dailyData.ticketsSold === 0 ? 0 : formatPercentage(dailyData.occupancyPercentage || 0)
+        }]);
+      } else if (reportType === "weekly") {
+        const weeklyData = data as WeeklyReport;
         
-        if (reportType === "daily") {
-          const dailyData = data as DailyReport;
+        // Pastikan ada salesData sebelum memproses
+        if (!weeklyData.salesData || weeklyData.salesData.length === 0) {
+          console.warn('No sales data for weekly report:', weeklyData);
           setTableData([{
             id: "1",
-            date: dailyData.date,
-            ticketsSold: dailyData.ticketsSold,
-            revenue: dailyData.revenue,
-            seatsFilledPercent: dailyData.ticketsSold === 0 ? 0 : formatPercentage(dailyData.occupancyPercentage)
+            date: `${weeklyData.startDate} - ${weeklyData.endDate}`,
+            ticketsSold: weeklyData.ticketsSold || 0,
+            revenue: weeklyData.revenue || 0,
+            seatsFilledPercent: weeklyData.ticketsSold === 0 ? 0 : formatPercentage(weeklyData.occupancyPercentage || 0)
           }]);
-        } else if (reportType === "weekly") {
-          const weeklyData = data as WeeklyReport;
-          // Buat data tabel dari sales data per hari
-          const tableRows = weeklyData.salesData.map((item, index) => {
-            // Cek jika ada data occupancy harian dalam respons API
-            const dailyOccupancy = data.occupancyByDay 
-              ? data.occupancyByDay[item.day] 
-              : weeklyData.occupancyPercentage;
-              
-            // Jika tidak ada tiket terjual, set persentase kursi terisi menjadi 0
-            const seatsFilledPercent = item.count === 0 ? 0 : formatPercentage(dailyOccupancy);
-            
-            return {
-              id: index.toString(),
-              date: item.day,
-              ticketsSold: item.count,
-              revenue: weeklyData.revenueData[index].amount,
-              seatsFilledPercent: seatsFilledPercent
-            };
-          });
-          setTableData(tableRows);
-        } else if (reportType === "monthly") {
-          const monthlyData = data as MonthlyReport;
-          // Buat data tabel dari sales data per hari dalam bulan
-          const tableRows = monthlyData.salesData.map((item, index) => {
-            const dateString = `${monthlyData.year}-${monthlyData.month.toString().padStart(2, '0')}-${item.day.toString().padStart(2, '0')}`;
-            // Cek jika ada data occupancy harian dalam respons API
-            const dailyOccupancy = data.occupancyByDay 
-              ? data.occupancyByDay[dateString] || data.occupancyByDay[item.day.toString()]
-              : monthlyData.occupancyPercentage;
-              
-            // Jika tidak ada tiket terjual, set persentase kursi terisi menjadi 0
-            const seatsFilledPercent = item.count === 0 ? 0 : formatPercentage(dailyOccupancy);
-            
-            return {
-              id: index.toString(),
-              date: dateString,
-              ticketsSold: item.count,
-              revenue: monthlyData.revenueData[index].amount,
-              seatsFilledPercent: seatsFilledPercent
-            };
-          });
-          setTableData(tableRows);
+          return;
         }
+        
+        // Buat data tabel dari sales data per hari
+        const tableRows = weeklyData.salesData.map((item, index) => {
+          // Cek jika ada data occupancy harian dalam respons API
+          const dailyOccupancy = data.occupancyByDay 
+            ? data.occupancyByDay[item.day] 
+            : weeklyData.occupancyPercentage;
+            
+          // Jika tidak ada tiket terjual, set persentase kursi terisi menjadi 0
+          const seatsFilledPercent = item.count === 0 ? 0 : formatPercentage(dailyOccupancy || 0);
+          
+          return {
+            id: index.toString(),
+            date: item.day,
+            ticketsSold: item.count || 0,
+            revenue: weeklyData.revenueData[index]?.amount || 0,
+            seatsFilledPercent: seatsFilledPercent
+          };
+        });
+        setTableData(tableRows);
+      } else if (reportType === "monthly") {
+        const monthlyData = data as MonthlyReport;
+        
+        // Pastikan ada salesData sebelum memproses
+        if (!monthlyData.salesData || monthlyData.salesData.length === 0) {
+          console.warn('No sales data for monthly report:', monthlyData);
+          setTableData([{
+            id: "1",
+            date: `${monthlyData.year}-${monthlyData.month.toString().padStart(2, '0')}`,
+            ticketsSold: monthlyData.ticketsSold || 0,
+            revenue: monthlyData.revenue || 0,
+            seatsFilledPercent: monthlyData.ticketsSold === 0 ? 0 : formatPercentage(monthlyData.occupancyPercentage || 0)
+          }]);
+          return;
+        }
+        
+        // Buat data tabel dari sales data per hari dalam bulan
+        const tableRows = monthlyData.salesData.map((item, index) => {
+          const dateString = `${monthlyData.year}-${monthlyData.month.toString().padStart(2, '0')}-${item.day.toString().padStart(2, '0')}`;
+          // Cek jika ada data occupancy harian dalam respons API
+          const dailyOccupancy = data.occupancyByDay 
+            ? data.occupancyByDay[dateString] || data.occupancyByDay[item.day.toString()]
+            : monthlyData.occupancyPercentage;
+            
+          // Jika tidak ada tiket terjual, set persentase kursi terisi menjadi 0
+          const seatsFilledPercent = item.count === 0 ? 0 : formatPercentage(dailyOccupancy || 0);
+          
+          return {
+            id: index.toString(),
+            date: dateString,
+            ticketsSold: item.count || 0,
+            revenue: monthlyData.revenueData[index]?.amount || 0,
+            seatsFilledPercent: seatsFilledPercent
+          };
+        });
+        setTableData(tableRows);
       }
     }
   };
