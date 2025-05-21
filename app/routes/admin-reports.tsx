@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { FaCalendarAlt, FaChartBar, FaTable, FaFilter, FaBuilding, FaClipboardList } from "react-icons/fa";
+import { FaCalendarAlt, FaChartBar, FaTable, FaFilter, FaBuilding, FaClipboardList, FaDownload } from "react-icons/fa";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
 import { ProtectedRoute } from "../components/protected-route";
 import { Navbar } from "../components/navbar";
@@ -60,6 +60,7 @@ function AdminReportContent() {
   const [utilization, setUtilization] = useState<UtilizationData[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState<boolean>(false);
   
   // Theme colors for consistent UI
   const THEME_COLORS = {
@@ -384,8 +385,69 @@ function AdminReportContent() {
     return eventId;
   };
   
+  // Download report function
+  const downloadReport = async () => {
+    setDownloading(true);
+    setError(null);
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Token not found. Please login again.');
+      }
+      
+      // Menggunakan tipe 'all' sebagai default tanpa parameter rentang waktu
+      let url = `/api/admin/auditorium/download-report?type=all`;
+      
+      // Menggunakan fetch untuk mendapatkan data sebagai blob
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.status === 401) {
+        throw new Error('Your session has expired. Please login again.');
+      }
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
+      }
+      
+      // Check untuk melihat apakah respons berisi JSON error atau file PDF
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        if (data.message && data.message.includes("Insufficient data")) {
+          throw new Error('Insufficient data for the selected period.');
+        }
+      }
+      
+      // Download blob data sebagai file
+      const blob = await response.blob();
+      const filename = response.headers.get('content-disposition')?.split('filename=')[1] || `auditorium-report-all.pdf`;
+      
+      // Membuat URL untuk blob dan trigger download
+      const url_download = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url_download;
+      a.download = filename.replace(/"/g, '');
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url_download);
+      
+    } catch (err: any) {
+      console.error('Failed to download report:', err);
+      setError(err.message || 'Failed to download report. Please try again.');
+    } finally {
+      setDownloading(false);
+    }
+  };
+  
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-secondary">
       <Navbar />
       <div className="flex-grow container mx-auto px-4 py-6 mt-20">
         {/* Header */}
@@ -395,26 +457,47 @@ function AdminReportContent() {
             <p className="text-sm text-gray-600 mt-1">Monitor auditorium usage, events, and utilization</p>
           </div>
           
-          {/* Date range selector */}
-          <div className="flex items-center gap-2 bg-white p-2 rounded-md shadow-sm">
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">From</label>
-              <input
-                type="date"
-                className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-                value={dateRange.from}
-                onChange={(e) => setDateRange({...dateRange, from: e.target.value})}
-              />
+          <div className="flex items-center gap-2">
+            {/* Date range selector */}
+            <div className="flex items-center gap-2 bg-white p-2 rounded-md shadow-sm">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">From</label>
+                <input
+                  type="date"
+                  className="border border-gray-300 rounded-md px-2 py-1 text-sm"
+                  value={dateRange.from}
+                  onChange={(e) => setDateRange({...dateRange, from: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">To</label>
+                <input
+                  type="date"
+                  className="border border-gray-300 rounded-md px-2 py-1 text-sm"
+                  value={dateRange.to}
+                  onChange={(e) => setDateRange({...dateRange, to: e.target.value})}
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">To</label>
-              <input
-                type="date"
-                className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-                value={dateRange.to}
-                onChange={(e) => setDateRange({...dateRange, to: e.target.value})}
-              />
-            </div>
+            
+            {/* Download button */}
+            <button
+              onClick={downloadReport}
+              disabled={downloading || loading}
+              className="flex items-center bg-primary text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {downloading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                  Downloading...
+                </>
+              ) : (
+                <>
+                  <FaDownload className="mr-2" />
+                  Download Report
+                </>
+              )}
+            </button>
           </div>
         </div>
         

@@ -62,6 +62,8 @@ function ReportPageContent() {
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [showTable, setShowTable] = useState<boolean>(false);
   const [noDataMessage, setNoDataMessage] = useState<string | null>(null);
+  const [events, setEvents] = useState<{ id: string; name: string }[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<string>("all");
 
   // Colors untuk charts
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
@@ -125,7 +127,6 @@ function ReportPageContent() {
   // Fungsi untuk memuat data event milik event organizer
   const loadEvents = async () => {
     try {
-      // Catatan: Fungsi ini tetap ada, tetapi tidak digunakan lagi untuk dropdown event selector
       const response = await fetch('/api/events/my-events', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -137,7 +138,17 @@ function ReportPageContent() {
       }
       
       const data = await response.json();
-      // Data events masih diload tapi tidak digunakan untuk filter
+      
+      // Menyimpan data event untuk dropdown
+      if (data.data && Array.isArray(data.data)) {
+        const eventOptions = data.data.map((event: any) => ({
+          id: event._id || event.id,
+          name: event.name
+        }));
+        
+        // Tambahkan opsi "All Events" di awal
+        setEvents([{ id: "all", name: "All Events" }, ...eventOptions]);
+      }
     } catch (err) {
       setError('Failed to load events.');
     }
@@ -171,8 +182,14 @@ function ReportPageContent() {
         throw new Error('Token not found. Please login again.');
       }
       
-      // Ambil data dari endpoint /api/reports/all (tanpa parameter eventId)
-      const response = await fetch('/api/reports/all', {
+      // Buat URL dengan parameter eventId jika event tertentu dipilih
+      let url = '/api/reports/all';
+      if (selectedEvent !== "all") {
+        url += `?eventId=${selectedEvent}`;
+      }
+      
+      // Ambil data dari endpoint /api/reports/all dengan atau tanpa parameter eventId
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -241,12 +258,15 @@ function ReportPageContent() {
               ? allReportData.occupancyData.find(o => o.day === item.day)?.percentage
               : null;
             
+            // Jika tidak ada tiket terjual, set persentase kursi terisi menjadi 0
+            const seatsFilledPercent = item.count === 0 ? 0 : formatPercentage(dateOccupancy || data.occupancyPercentage);
+            
             return {
-            id: index.toString(),
-            date: item.day,
-            ticketsSold: item.count,
-            revenue: allReportData.revenueData[index]?.amount || 0,
-              seatsFilledPercent: formatPercentage(dateOccupancy || data.occupancyPercentage)
+              id: index.toString(),
+              date: item.day,
+              ticketsSold: item.count,
+              revenue: allReportData.revenueData[index]?.amount || 0,
+              seatsFilledPercent: seatsFilledPercent
             };
           });
           setTableData(tableRows);
@@ -257,7 +277,7 @@ function ReportPageContent() {
             date: "All Time",
             ticketsSold: allReportData.ticketsSold,
             revenue: allReportData.revenue,
-            seatsFilledPercent: formatPercentage(allReportData.occupancyPercentage)
+            seatsFilledPercent: allReportData.ticketsSold === 0 ? 0 : formatPercentage(allReportData.occupancyPercentage)
           }]);
         }
       } else {
@@ -329,6 +349,11 @@ function ReportPageContent() {
       if (downloadType !== 'weekly' && downloadType !== 'all' as string) {
         formattedDate = selectedDate.split('T')[0]; // Pastikan format tanggal bersih
         params.append('date', formattedDate);
+      }
+      
+      // Tambahkan eventId jika event tertentu dipilih
+      if (selectedEvent !== "all") {
+        params.append('eventId', selectedEvent);
       }
       
       // Debug mode - log parameter yang dikirim
@@ -434,9 +459,9 @@ function ReportPageContent() {
       return;
     }
     
-    // Jalankan loadReport saat filter berubah (tanpa selectedEvent)
+    // Jalankan loadReport saat filter berubah 
     loadReport();
-  }, [reportType, selectedDate]);
+  }, [reportType, selectedDate, selectedEvent]);
   
   // Fungsi untuk mengecek apakah tanggal yang dipilih ada di masa depan
   const isFutureDate = (dateToCheck: string, reportType: string): boolean => {
@@ -501,10 +526,15 @@ function ReportPageContent() {
       // Buat query parameters
       const params = new URLSearchParams();
       
-      // Tambahkan parameter filter (tanpa eventId)
+      // Tambahkan parameter filter
       if (reportType !== "weekly") {
         const formattedDate = selectedDate.split('T')[0];
         params.append('date', formattedDate);
+      }
+      
+      // Tambahkan eventId jika event tertentu dipilih
+      if (selectedEvent !== "all") {
+        params.append('eventId', selectedEvent);
       }
       
       // Buat fetch request
@@ -609,66 +639,75 @@ function ReportPageContent() {
             ? allReportData.occupancyData.find(o => o.day === item.day)?.percentage
             : null;
             
+          // Jika tidak ada tiket terjual, set persentase kursi terisi menjadi 0
+          const seatsFilledPercent = item.count === 0 ? 0 : formatPercentage(dateOccupancy || data.occupancyPercentage);
+          
           return {
-          id: index.toString(),
-          date: item.day,
-          ticketsSold: item.count,
+            id: index.toString(),
+            date: item.day,
+            ticketsSold: item.count,
             revenue: allReportData.revenueData[index]?.amount || 0,
-            seatsFilledPercent: formatPercentage(dateOccupancy || data.occupancyPercentage)
+            seatsFilledPercent: seatsFilledPercent
           };
         });
         
         setTableData(tableRows);
       } else {
         // Proses untuk format report normal
-      setReport(data);
-      
-      if (reportType === "daily") {
-        const dailyData = data as DailyReport;
-        setTableData([{
-          id: "1",
-          date: dailyData.date,
-          ticketsSold: dailyData.ticketsSold,
-          revenue: dailyData.revenue,
-          seatsFilledPercent: formatPercentage(dailyData.occupancyPercentage)
-        }]);
-      } else if (reportType === "weekly") {
-        const weeklyData = data as WeeklyReport;
-        // Buat data tabel dari sales data per hari
-        const tableRows = weeklyData.salesData.map((item, index) => {
-          // Cek jika ada data occupancy harian dalam respons API
-          const dailyOccupancy = data.occupancyByDay 
-            ? data.occupancyByDay[item.day] 
-            : weeklyData.occupancyPercentage;
+        setReport(data);
+        
+        if (reportType === "daily") {
+          const dailyData = data as DailyReport;
+          setTableData([{
+            id: "1",
+            date: dailyData.date,
+            ticketsSold: dailyData.ticketsSold,
+            revenue: dailyData.revenue,
+            seatsFilledPercent: dailyData.ticketsSold === 0 ? 0 : formatPercentage(dailyData.occupancyPercentage)
+          }]);
+        } else if (reportType === "weekly") {
+          const weeklyData = data as WeeklyReport;
+          // Buat data tabel dari sales data per hari
+          const tableRows = weeklyData.salesData.map((item, index) => {
+            // Cek jika ada data occupancy harian dalam respons API
+            const dailyOccupancy = data.occupancyByDay 
+              ? data.occupancyByDay[item.day] 
+              : weeklyData.occupancyPercentage;
+              
+            // Jika tidak ada tiket terjual, set persentase kursi terisi menjadi 0
+            const seatsFilledPercent = item.count === 0 ? 0 : formatPercentage(dailyOccupancy);
             
-          return {
-          id: index.toString(),
-          date: item.day,
-          ticketsSold: item.count,
-          revenue: weeklyData.revenueData[index].amount,
-            seatsFilledPercent: formatPercentage(dailyOccupancy)
-          };
-        });
-        setTableData(tableRows);
-      } else if (reportType === "monthly") {
-        const monthlyData = data as MonthlyReport;
-        // Buat data tabel dari sales data per hari dalam bulan
-        const tableRows = monthlyData.salesData.map((item, index) => {
-          const dateString = `${monthlyData.year}-${monthlyData.month.toString().padStart(2, '0')}-${item.day.toString().padStart(2, '0')}`;
-          // Cek jika ada data occupancy harian dalam respons API
-          const dailyOccupancy = data.occupancyByDay 
-            ? data.occupancyByDay[dateString] || data.occupancyByDay[item.day.toString()]
-            : monthlyData.occupancyPercentage;
+            return {
+              id: index.toString(),
+              date: item.day,
+              ticketsSold: item.count,
+              revenue: weeklyData.revenueData[index].amount,
+              seatsFilledPercent: seatsFilledPercent
+            };
+          });
+          setTableData(tableRows);
+        } else if (reportType === "monthly") {
+          const monthlyData = data as MonthlyReport;
+          // Buat data tabel dari sales data per hari dalam bulan
+          const tableRows = monthlyData.salesData.map((item, index) => {
+            const dateString = `${monthlyData.year}-${monthlyData.month.toString().padStart(2, '0')}-${item.day.toString().padStart(2, '0')}`;
+            // Cek jika ada data occupancy harian dalam respons API
+            const dailyOccupancy = data.occupancyByDay 
+              ? data.occupancyByDay[dateString] || data.occupancyByDay[item.day.toString()]
+              : monthlyData.occupancyPercentage;
+              
+            // Jika tidak ada tiket terjual, set persentase kursi terisi menjadi 0
+            const seatsFilledPercent = item.count === 0 ? 0 : formatPercentage(dailyOccupancy);
             
-          return {
-          id: index.toString(),
-            date: dateString,
-          ticketsSold: item.count,
-          revenue: monthlyData.revenueData[index].amount,
-            seatsFilledPercent: formatPercentage(dailyOccupancy)
-          };
-        });
-        setTableData(tableRows);
+            return {
+              id: index.toString(),
+              date: dateString,
+              ticketsSold: item.count,
+              revenue: monthlyData.revenueData[index].amount,
+              seatsFilledPercent: seatsFilledPercent
+            };
+          });
+          setTableData(tableRows);
         }
       }
     }
@@ -678,7 +717,8 @@ function ReportPageContent() {
   const getOccupancyData = () => {
     if (!report) return [];
     
-    const occupancy = report.occupancyPercentage;
+    // Jika tidak ada tiket terjual, tampilkan 0%
+    const occupancy = report.ticketsSold === 0 ? 0 : report.occupancyPercentage;
     return [
       { name: 'Occupied', value: formatPercentage(occupancy), fill: THEME_COLORS.primary },
       { name: 'Available', value: formatPercentage(100 - occupancy), fill: THEME_COLORS.lightGray }
@@ -689,10 +729,13 @@ function ReportPageContent() {
   const getRadialData = () => {
     if (!report) return [];
     
+    // Jika tidak ada tiket terjual, tampilkan 0%
+    const occupancy = report.ticketsSold === 0 ? 0 : report.occupancyPercentage;
+    
     return [
       {
         name: 'Occupancy',
-        value: formatPercentage(report.occupancyPercentage),
+        value: formatPercentage(occupancy),
         fill: THEME_COLORS.primary
       }
     ];
@@ -752,7 +795,7 @@ function ReportPageContent() {
         
         {/* Filter section - collapsible */}
         <div className={`bg-white rounded-lg shadow-md p-3 mb-4 transition-all duration-300 ${showFilters ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {/* Report Type */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Report Type</label>
@@ -765,6 +808,22 @@ function ReportPageContent() {
                 <option value="daily">Daily</option>
                 <option value="weekly">Weekly</option>
                 <option value="monthly">Monthly</option>
+              </select>
+            </div>
+            
+            {/* Event Filter */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Event</label>
+              <select
+                className="border border-gray-300 rounded-md px-2 py-1.5 w-full bg-white shadow-sm text-sm focus:ring-2 focus:ring-secondary/50 focus:border-secondary transition"
+                value={selectedEvent}
+                onChange={(e) => setSelectedEvent(e.target.value)}
+              >
+                {events.map(event => (
+                  <option key={event.id} value={event.id}>
+                    {event.name}
+                  </option>
+                ))}
               </select>
             </div>
             
@@ -869,7 +928,7 @@ function ReportPageContent() {
                   </div>
                 </div>
                 <div className="mt-1">
-                  <span className="text-xs text-gray-500">{getReportTypeLabel()} | All Events</span>
+                  <span className="text-xs text-gray-500">{getReportTypeLabel()} | {selectedEvent === "all" ? "All Events" : events.find(e => e.id === selectedEvent)?.name || "Selected Event"}</span>
                 </div>
               </div>
               
@@ -878,7 +937,7 @@ function ReportPageContent() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-gray-500 text-xs font-medium">Seat Occupancy</h3>
-                    <p className="text-xl font-bold text-gray-800 mt-1">{formatPercentage(report.occupancyPercentage)}%</p>
+                    <p className="text-xl font-bold text-gray-800 mt-1">{report.ticketsSold === 0 ? "0" : formatPercentage(report.occupancyPercentage)}%</p>
                   </div>
                   <div className="p-2 rounded-full" style={{ backgroundColor: `${THEME_COLORS.primary}20` }}>
                     <svg className="w-5 h-5" style={{ color: THEME_COLORS.primary }} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -1028,7 +1087,7 @@ function ReportPageContent() {
                           fontFamily: 'sans-serif' 
                         }}
                       >
-                        {formatPercentage(report.occupancyPercentage)}%
+                        {report.ticketsSold === 0 ? "0" : formatPercentage(report.occupancyPercentage)}%
                       </text>
                       <text
                         x="50%"
