@@ -47,7 +47,7 @@ interface PaginationData {
 export function meta() {
   return [
     { title: "My Events - HELPVerse" },
-    { name: "description", content: "Kelola semua event yang telah Anda buat" },
+    { name: "description", content: "Manage all events you have created" },
   ];
 }
 
@@ -84,7 +84,7 @@ export default function MyEventsPage(): React.ReactElement {
       const token = localStorage.getItem('token');
 
       if (!token) {
-        throw new Error('User tidak terautentikasi');
+        throw new Error('User not authenticated');
       }
 
       // Menyiapkan parameter query hanya untuk pagination
@@ -141,9 +141,9 @@ export default function MyEventsPage(): React.ReactElement {
     } catch (err) {
       console.error('Error fetching events:', err);
       if (axios.isAxiosError(err) && err.response) {
-        setError(err.response.data.message || 'Gagal mengambil data event');
+        setError(err.response.data.message || 'Failed to fetch event data');
       } else {
-        setError(err instanceof Error ? err.message : 'Gagal mengambil data event');
+        setError(err instanceof Error ? err.message : 'Failed to fetch event data');
       }
       // Set array events kosong jika terjadi error
       setEvents([]);
@@ -173,7 +173,7 @@ export default function MyEventsPage(): React.ReactElement {
       const token = localStorage.getItem('token');
 
       if (!token) {
-        throw new Error('User tidak terautentikasi');
+        throw new Error('User not authenticated');
       }
 
       const response = await axios.delete(`http://localhost:5000/api/events/${eventId}`, {
@@ -189,18 +189,18 @@ export default function MyEventsPage(): React.ReactElement {
         );
         
         setModalType('success');
-        setModalMessage('Event berhasil dihapus');
+        setModalMessage('Event successfully deleted');
         setShowModal(true);
         
         // Perbarui data setelah menghapus event
         fetchEvents(currentPage, itemsPerPage);
       } else {
-        throw new Error(response.data.message || 'Gagal menghapus event');
+        throw new Error(response.data.message || 'Failed to delete event');
       }
     } catch (err) {
       console.error('Error deleting event:', err);
       
-      let errorMessage = 'Gagal menghapus event';
+      let errorMessage = 'Failed to delete event';
       
       if (axios.isAxiosError(err) && err.response) {
         errorMessage = err.response.data.message || errorMessage;
@@ -274,7 +274,7 @@ export default function MyEventsPage(): React.ReactElement {
               onClick={() => fetchEvents(1, itemsPerPage)}
               className="bg-primary text-white px-6 py-2 rounded-full inline-block"
             >
-              Coba Lagi
+              Try Again
             </button>
           </div>
         </div>
@@ -304,7 +304,7 @@ export default function MyEventsPage(): React.ReactElement {
                 )}
               </div>
               <h2 className="text-xl font-semibold mb-2 text-center">
-                {modalType === 'success' ? 'Berhasil' : 'Gagal'}
+                {modalType === 'success' ? 'Success' : 'Failed'}
               </h2>
               <p className="text-gray-600 mb-6 text-center">{modalMessage}</p>
               <div className="text-center">
@@ -312,7 +312,7 @@ export default function MyEventsPage(): React.ReactElement {
                   onClick={() => setShowModal(false)}
                   className="bg-primary text-white px-6 py-2 rounded-full inline-block"
                 >
-                  Tutup
+                  Close
                 </button>
               </div>
             </div>
@@ -330,10 +330,10 @@ export default function MyEventsPage(): React.ReactElement {
                 </div>
               </div>
               <h2 className="text-xl font-semibold mb-6 text-center text-gray-800">
-                Apakah Anda yakin ingin<br/>menghapus event ini?
+                Are you sure you want to<br/>delete this event?
               </h2>
               <p className="text-sm text-gray-600 mb-6">
-                Tindakan ini tidak dapat dibatalkan dan semua data terkait event ini akan dihapus.
+                This action cannot be undone and all data related to this event will be deleted.
               </p>
               
               <div className="flex justify-center gap-4 mt-4">
@@ -341,13 +341,13 @@ export default function MyEventsPage(): React.ReactElement {
                   onClick={() => setShowConfirmModal(false)}
                   className="bg-gray-200 text-gray-800 px-8 py-2 rounded-md hover:bg-gray-300 w-24"
                 >
-                  Tidak
+                  No
                 </button>
                 <button
                   onClick={confirmDeleteEvent}
                   className="bg-red-600 text-white px-8 py-2 rounded-md hover:bg-red-700 w-24"
                 >
-                  Ya
+                  Yes
                 </button>
               </div>
             </div>
@@ -379,10 +379,10 @@ export default function MyEventsPage(): React.ReactElement {
             <div className="flex justify-center mb-4">
               <FaCalendarAlt className="text-gray-400 text-5xl" />
             </div>
-            <h2 className="text-xl font-semibold mb-2">Tidak ada event ditemukan</h2>
-            <p className="text-gray-600 mb-6">Anda belum membuat event apapun.</p>
+            <h2 className="text-xl font-semibold mb-2">No events found</h2>
+            <p className="text-gray-600 mb-6">You haven't created any events yet.</p>
             <Link to="/event/create" className="bg-primary text-white px-6 py-2 rounded-full inline-block">
-              Buat Event Baru
+              Create New Event
             </Link>
           </div>
         ) : (
@@ -451,7 +451,7 @@ export default function MyEventsPage(): React.ReactElement {
                               <Link
                                 to={`/event/${event.id}`}
                                 className="bg-teal-500 text-white p-2 rounded-full mr-2 hover:bg-teal-600 transition duration-300"
-                                title="Lihat Event"
+                                title="View Event"
                               >
                                 <FaEye className="text-sm" />
                               </Link>
@@ -468,7 +468,7 @@ export default function MyEventsPage(): React.ReactElement {
                                   deleteLoading === event.id ? 'opacity-50 cursor-not-allowed' : ''
                                 }`}
                                 disabled={deleteLoading === event.id}
-                                title="Hapus Event"
+                                title="Delete Event"
                               >
                                 {deleteLoading === event.id ? (
                                   <div className="h-4 w-4 border-2 border-white border-t-transparent animate-spin rounded-full"></div>
