@@ -74,7 +74,7 @@ function AdminReportContent() {
     lightText: '#677489'
   };
   
-  // Load schedule data
+  // Load schedule data - Hanya untuk event yang akan datang dan saat ini
   const loadSchedule = async () => {
     setLoading(true);
     setError(null);
@@ -85,13 +85,139 @@ function AdminReportContent() {
         throw new Error('Token not found. Please login again.');
       }
       
+      // Pertama, coba ambil data semua event dari endpoint admin untuk mendapatkan event yang akan datang
+      try {
+        const eventsResponse = await fetch('/api/admin/events', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (eventsResponse.ok) {
+          const eventsData = await eventsResponse.json();
+          
+          if (eventsData.data && Array.isArray(eventsData.data)) {
+            // Filter untuk event yang AKAN DATANG atau SAAT INI berdasarkan tanggal
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const futureEvents = eventsData.data.filter((event: any) => {
+              if (!event.date) return false;
+              
+              // Convert tanggal event ke objek Date
+              const eventDate = new Date(event.date);
+              eventDate.setHours(0, 0, 0, 0);
+              
+              // Tanggal event harus sama dengan atau setelah hari ini
+              return eventDate >= today;
+            });
+            
+            console.log('Found future events:', futureEvents.length);
+            
+            // Konversi event ke format schedule item
+            if (futureEvents.length > 0) {
+              const scheduleItems = futureEvents.map((event: any, index: number) => {
+                // Buat waktu mulai dan selesai
+                const eventDate = new Date(event.date);
+                
+                // Waktu berdasarkan data event
+                let startHour = 0;
+                let startMinute = 0;
+                let duration = 0;
+                
+                // Jika ada waktu pada event, gunakan itu
+                if (event.time) {
+                  const timeParts = event.time.split(':');
+                  if (timeParts.length >= 2) {
+                    startHour = parseInt(timeParts[0], 10);
+                    startMinute = parseInt(timeParts[1], 10);
+                  }
+                }
+                
+                // Durasi acara berdasarkan data yang ada atau estimasi dari API
+                if (event.duration) {
+                  duration = event.duration;
+                } else if (event.endTime && event.time) {
+                  // Hitung durasi jika ada data waktu mulai dan selesai
+                  const eventStart = new Date(eventDate);
+                  eventStart.setHours(startHour, startMinute, 0, 0);
+                  
+                  const eventEnd = new Date(event.endTime);
+                  
+                  // Durasi dalam jam
+                  duration = (eventEnd.getTime() - eventStart.getTime()) / (1000 * 60 * 60);
+                } else {
+                  // Jika tidak ada informasi durasi, coba ambil dari data terkait
+                  duration = event.usageHours || 0;
+                }
+                
+                // Jika masih belum ada durasi yang valid, biarkan API backend menentukan
+                if (duration <= 0) {
+                  duration = 0; // API akan menangani durasi default jika diperlukan
+                }
+                
+                // Set waktu mulai
+                const startTime = new Date(eventDate);
+                startTime.setHours(startHour, startMinute, 0, 0);
+                
+                // Set waktu selesai berdasarkan durasi
+                const endTime = new Date(startTime);
+                if (duration > 0) {
+                  endTime.setTime(startTime.getTime() + (duration * 60 * 60 * 1000));
+                }
+                
+                return {
+                  id: event._id || event.id || `${index}`,
+                  event: {
+                    name: event.name,
+                    _id: event._id || event.id
+                  },
+                  startTime: startTime.toISOString(),
+                  endTime: endTime.toISOString(),
+                  booked_by: event.createdBy || event.organizer || {
+                    _id: event.organizerId || "",
+                    username: event.organizerUsername || "",
+                    fullName: event.organizerName || "",
+                    organizerName: event.organizerName || ""
+                  }
+                };
+              });
+              
+              // Filter schedule items berdasarkan rentang tanggal yang dipilih
+              const fromDate = new Date(dateRange.from);
+              const toDate = new Date(dateRange.to);
+              fromDate.setHours(0, 0, 0, 0);
+              toDate.setHours(23, 59, 59, 999);
+              
+              const filteredSchedule = scheduleItems.filter((item: ScheduleItem) => {
+                const itemDate = new Date(item.startTime);
+                return itemDate >= fromDate && itemDate <= toDate;
+              });
+              
+              console.log('Filtered future events in date range:', filteredSchedule.length);
+              
+              // Set schedule data
+              setSchedule(filteredSchedule);
+              return; // Keluar dari fungsi jika berhasil
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching from admin events for schedule:', err);
+      }
+      
+      // Jika tidak berhasil dengan endpoint admin events, gunakan endpoint schedule
       const params = new URLSearchParams();
       params.append('from', dateRange.from);
       params.append('to', dateRange.to);
       
       const response = await fetch(`/api/admin/auditorium/schedule?${params.toString()}`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         }
       });
       
@@ -108,7 +234,20 @@ function AdminReportContent() {
       if (data.message && data.message.includes("Insufficient data")) {
         setSchedule([]);
       } else {
-        setSchedule(data.data || []);
+        // Filter untuk memastikan hanya event future yang masuk ke schedule
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const filteredSchedule = data.data ? data.data.filter((item: ScheduleItem) => {
+          if (!item.startTime) return false;
+          
+          const itemDate = new Date(item.startTime);
+          itemDate.setHours(0, 0, 0, 0);
+          
+          return itemDate >= today;
+        }) : [];
+        
+        setSchedule(filteredSchedule || []);
       }
     } catch (err: any) {
       console.error('Failed to load schedule:', err);
@@ -150,21 +289,30 @@ function AdminReportContent() {
           console.log('Admin events data:', eventsData);
           
           if (eventsData.data && Array.isArray(eventsData.data) && eventsData.data.length > 0) {
-            // Filter untuk event dengan tanggal valid
+            // Filter untuk event yang SUDAH LEWAT berdasarkan tanggal saat ini
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
             const validEvents = eventsData.data.filter((event: any) => {
               if (!event.date) return false;
               
-              // Cek apakah event dalam rentang tanggal yang dipilih
+              // Convert tanggal event ke objek Date
               const eventDate = new Date(event.date);
+              eventDate.setHours(0, 0, 0, 0);
+              
+              // Cek apakah event dalam rentang tanggal yang dipilih DAN sudah berlalu
               const fromDate = new Date(dateRange.from);
               const toDate = new Date(dateRange.to);
               fromDate.setHours(0, 0, 0, 0);
               toDate.setHours(23, 59, 59, 999);
               
-              return eventDate >= fromDate && eventDate <= toDate;
+              const isInDateRange = eventDate >= fromDate && eventDate <= toDate;
+              const isPastEvent = eventDate < today; // Event sudah lewat
+              
+              return isInDateRange && isPastEvent;
             });
             
-            console.log('Valid events in date range:', validEvents.length);
+            console.log('Valid PAST events in date range:', validEvents.length);
             
             // Siapkan data event dengan format PastEvent
             const formattedEvents = validEvents.map((event: any) => {
@@ -176,23 +324,23 @@ function AdminReportContent() {
                 occupancy = (event.ticketsSold / event.totalSeats) * 100;
               }
               
-              // Default untuk usage hours
-              const usageHours = event.usageHours || 3; // Asumsi 3 jam per event
+              // Gunakan data durasi dari event jika tersedia
+              const usageHours = event.usageHours || event.duration || 0;
               
               return {
                 _id: event._id || event.id,
                 name: event.name,
                 date: event.date,
-                time: event.time || "00:00",
+                time: event.time || "",
                 organizer: event.createdBy || event.organizer || {
-                  _id: "",
-                  username: "",
-                  fullName: "",
-                  organizerName: event.organizerName || "Unknown Organizer"
+                  _id: event.organizerId || "",
+                  username: event.organizerUsername || "",
+                  fullName: event.organizerName || "",
+                  organizerName: event.organizerName || ""
                 },
-                totalSeats: event.totalSeats || 100,
-                availableSeats: event.availableSeats || (event.totalSeats ? event.totalSeats - (event.ticketsSold || 0) : 0),
-                occupancy: occupancy || 0,
+                totalSeats: event.totalSeats || 0,
+                availableSeats: event.availableSeats || 0,
+                occupancy: occupancy,
                 usageHours: usageHours
               };
             });
@@ -231,28 +379,35 @@ function AdminReportContent() {
       if (data.message && data.message.includes("Insufficient data")) {
         setPastEvents([]);
       } else {
-        // Filter events yang valid dengan kriteria yang lebih longgar
+        // Filter events yang valid dengan kriteria yang lebih ketat - HANYA EVENT YANG SUDAH LEWAT
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
         const filteredEvents = data.data ? data.data.filter((event: PastEvent) => {
           // Verifikasi minimal memiliki data dasar yang valid
           const hasBasicData = event._id && event.name && event.date;
           
-          // Tanggal event harus dalam rentang yang dipilih
+          // Convert tanggal event ke objek Date
           const eventDate = new Date(event.date);
+          eventDate.setHours(0, 0, 0, 0);
+          
+          // Tanggal event harus dalam rentang yang dipilih
           const fromDate = new Date(dateRange.from);
           const toDate = new Date(dateRange.to);
           fromDate.setHours(0, 0, 0, 0);
           toDate.setHours(23, 59, 59, 999);
           
           const isInDateRange = eventDate >= fromDate && eventDate <= toDate;
+          const isPastEvent = eventDate < today; // Event sudah lewat
           
-          return hasBasicData && isInDateRange;
+          return hasBasicData && isInDateRange && isPastEvent;
         }) : [];
         
-        // Berikan nilai default untuk properti yang mungkin tidak ada
+        // Gunakan data asli tanpa memberikan nilai default
         const processedEvents = filteredEvents.map((event: PastEvent) => ({
           ...event,
           occupancy: typeof event.occupancy === 'number' ? event.occupancy : 0,
-          usageHours: typeof event.usageHours === 'number' && event.usageHours > 0 ? event.usageHours : 3
+          usageHours: typeof event.usageHours === 'number' ? event.usageHours : 0
         }));
         
         setPastEvents(processedEvents);
@@ -271,11 +426,6 @@ function AdminReportContent() {
     setError(null);
     
     try {
-      // Pastikan data event sudah dimuat terlebih dahulu
-      if (pastEvents.length === 0) {
-        await loadPastEvents();
-      }
-      
       const token = localStorage.getItem('token');
       if (!token) {
         throw new Error('Token not found. Please login again.');
@@ -312,77 +462,123 @@ function AdminReportContent() {
         // Console log untuk debug
         console.log('Utilization data received:', data.data);
         
-        // Filter utilization data untuk hanya menyertakan data yang valid
-        const filteredUtilization = data.data ? data.data.filter((item: UtilizationData) => {
-          // Pastikan data utilization valid
-          const hasValidData = 
-            typeof item.total_hours_used === 'number' && 
-            typeof item.total_hours_available === 'number' && 
-            typeof item.utilization_percentage === 'number';
-          
-          // Untuk admin report, tampilkan semua data utilization meskipun belum ada penggunaan
-          const hasRelevantData = true;
-          
-          return hasValidData && hasRelevantData;
-        }) : [];
-        
-        // Dapatkan semua ID event unik dari utilization data
-        const eventIds = new Set<string>();
-        if (filteredUtilization && Array.isArray(filteredUtilization)) {
-          filteredUtilization.forEach((item: UtilizationData) => {
-            if (item.events && Array.isArray(item.events)) {
-              item.events.forEach((eventId: string) => {
-                if (typeof eventId === 'string') {
-                  eventIds.add(eventId);
-                }
-              });
+        // Pertama, ambil semua event - baik yang akan datang maupun yang sudah lewat
+        try {
+          const eventsResponse = await fetch('/api/admin/events', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
             }
           });
+          
+          if (eventsResponse.ok) {
+            const eventsData = await eventsResponse.json();
+            
+            if (eventsData.data && Array.isArray(eventsData.data) && eventsData.data.length > 0) {
+              const allEvents = eventsData.data.filter((event: any) => {
+                if (!event.date) return false;
+                
+                // Cek apakah event dalam rentang tanggal yang dipilih
+                const eventDate = new Date(event.date);
+                const fromDate = new Date(dateRange.from);
+                const toDate = new Date(dateRange.to);
+                fromDate.setHours(0, 0, 0, 0);
+                toDate.setHours(23, 59, 59, 999);
+                
+                return eventDate >= fromDate && eventDate <= toDate;
+              });
+              
+              console.log('All events for utilization:', allEvents.length);
+              
+              // Buat map tanggal event untuk utilization
+              const eventDateMap = new Map();
+              
+              allEvents.forEach((event: any) => {
+                if (!event.date) return;
+                
+                // Format tanggal ke YYYY-MM-DD
+                const date = new Date(event.date);
+                const dateKey = date.toISOString().split('T')[0];
+                
+                if (!eventDateMap.has(dateKey)) {
+                  eventDateMap.set(dateKey, []);
+                }
+                
+                eventDateMap.get(dateKey).push({
+                  _id: event._id || event.id,
+                  name: event.name,
+                  duration: event.usageHours || event.duration || 0
+                });
+              });
+              
+              // Filter utilization data untuk hanya menyertakan data yang valid
+              const filteredUtilization = data.data ? data.data.filter((item: UtilizationData) => {
+                // Pastikan data utilization valid
+                const hasValidData = 
+                  typeof item.total_hours_used === 'number' && 
+                  typeof item.total_hours_available === 'number' && 
+                  typeof item.utilization_percentage === 'number';
+                
+                return hasValidData;
+              }) : [];
+              
+              // Enhance utilization data dengan event
+              const enhancedUtilization = filteredUtilization.map((item: UtilizationData) => {
+                // Get tanggal dalam format YYYY-MM-DD
+                const utilizationDate = new Date(item.date);
+                const dateKey = utilizationDate.toISOString().split('T')[0];
+                
+                // Dapatkan event untuk tanggal ini (jika ada)
+                const eventsForDate = eventDateMap.get(dateKey) || [];
+                
+                // Jika ada event yang tidak ada di item.events, tambahkan
+                const currentEventIds = new Set(item.events || []);
+                const updatedEvents = [...currentEventIds];
+                
+                // Hitung total jam berdasarkan durasi aktual event
+                let additionalHours = 0;
+                
+                eventsForDate.forEach((event: any) => {
+                  if (!currentEventIds.has(event._id)) {
+                    updatedEvents.push(event._id);
+                    
+                    // Tambahkan durasi event ke total jam
+                    if (event.duration && event.duration > 0) {
+                      additionalHours += event.duration;
+                    }
+                  }
+                });
+                
+                // Jika tidak ada durasi yang valid, gunakan hours_used dari API
+                const totalHoursUsed = additionalHours > 0 ? 
+                  Math.max(item.total_hours_used, additionalHours) : 
+                  item.total_hours_used;
+                
+                // Hitung utilization percentage berdasarkan total jam
+                const utilizationPercentage = item.total_hours_available > 0 ?
+                  Math.min(Math.max((totalHoursUsed / item.total_hours_available) * 100, item.utilization_percentage), 100) :
+                  item.utilization_percentage;
+                
+                // Return item dengan data yang sudah diupdate
+                return {
+                  ...item,
+                  events: updatedEvents,
+                  total_hours_used: totalHoursUsed,
+                  utilization_percentage: utilizationPercentage
+                };
+              });
+              
+              setUtilization(enhancedUtilization);
+              return;
+            }
+          }
+        } catch (err) {
+          console.error('Error enhancing utilization with events data:', err);
         }
         
-        console.log('Unique event IDs in utilization:', Array.from(eventIds));
-        console.log('Current pastEvents:', pastEvents.map(e => e._id));
-        
-        // Menambahkan event baru ke utilization jika belum ada
-        const enhancedUtilization = filteredUtilization.map((item: UtilizationData) => {
-          // Cari event pada tanggal yang sama dengan item utilization
-          const eventsOnSameDate = pastEvents.filter(event => {
-            const eventDate = new Date(event.date);
-            const utilizationDate = new Date(item.date);
-            
-            // Bandingkan tahun, bulan, dan tanggal
-            return eventDate.getFullYear() === utilizationDate.getFullYear() &&
-                   eventDate.getMonth() === utilizationDate.getMonth() &&
-                   eventDate.getDate() === utilizationDate.getDate();
-          });
-          
-          // Jika ada event pada tanggal yang sama tapi tidak ada di events array
-          if (eventsOnSameDate.length > 0) {
-            const updatedEvents = [...(item.events || [])];
-            
-            eventsOnSameDate.forEach(event => {
-              // Periksa jika event belum ada di array
-              if (!updatedEvents.includes(event._id)) {
-                updatedEvents.push(event._id);
-              }
-            });
-            
-            // Update hours used berdasarkan jumlah event
-            const hoursUsed = updatedEvents.length * 3; // Asumsi setiap event 3 jam
-            
-            // Return item dengan data yang sudah diupdate
-            return {
-              ...item,
-              events: updatedEvents,
-              total_hours_used: Math.max(item.total_hours_used, hoursUsed),
-              utilization_percentage: Math.min(Math.max(hoursUsed / item.total_hours_available * 100, item.utilization_percentage), 100)
-            };
-          }
-          
-          return item;
-        });
-        
-        setUtilization(enhancedUtilization || []);
+        // Fallback ke data asli jika tidak bisa meningkatkan dengan event baru
+        setUtilization(data.data || []);
       }
     } catch (err: any) {
       console.error('Failed to load utilization:', err);
