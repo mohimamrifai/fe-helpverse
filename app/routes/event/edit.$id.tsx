@@ -104,7 +104,7 @@ export default function EditEvent() {
       const token = localStorage.getItem('token');
       
       if (!token) {
-        throw new Error('User tidak terautentikasi');
+        throw new Error('User not authenticated');
       }
       
       // Gunakan axios untuk konsistensi dengan bagian lain dari aplikasi
@@ -523,7 +523,7 @@ export default function EditEvent() {
       const token = localStorage.getItem('token');
       
       if (!token) {
-        throw new Error('User tidak terautentikasi');
+        throw new Error('User not authenticated');
       }
       
       const response = await fetch(`http://localhost:5000/api/events/${id}`, {
@@ -536,7 +536,7 @@ export default function EditEvent() {
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Gagal mengupdate event');
+        throw new Error(errorData.message || 'Failed to update event');
       }
       
       // Tampilkan modal sukses
@@ -544,7 +544,7 @@ export default function EditEvent() {
       
     } catch (error) {
       console.error('Error updating event:', error);
-      setSubmitError(error instanceof Error ? error.message : 'Gagal mengupdate event. Silakan coba lagi.');
+      setSubmitError(error instanceof Error ? error.message : 'Failed to update event. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -611,7 +611,7 @@ export default function EditEvent() {
         <div className="max-w-7xl mx-auto py-3 sm:py-6 md:py-10 px-3 sm:px-6 lg:px-8 flex justify-center items-center">
           <div className="text-center">
             <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p>Memuat data event...</p>
+            <p>Loading event data...</p>
           </div>
         </div>
         <Footer />
@@ -637,7 +637,7 @@ export default function EditEvent() {
               onClick={() => navigate('/my-events')}
               className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
-              Kembali ke Daftar Event
+              Back to Event List
             </button>
           </div>
         </div>

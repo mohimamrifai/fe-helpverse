@@ -97,12 +97,12 @@ export default function MyBookingsPage(): React.ReactElement {
       setCancelSuccess(bookingId);
       
       setModalType('success');
-      setModalMessage('Pemesanan berhasil dibatalkan');
+      setModalMessage('Booking successfully cancelled');
       setShowModal(true);
     } catch (err) {
       console.error('Error cancelling booking:', err);
       
-      let errorMessage = 'Gagal membatalkan pemesanan';
+      let errorMessage = 'Failed to cancel booking';
       if (err instanceof Error) {
         errorMessage = err.message;
       }

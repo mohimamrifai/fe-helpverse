@@ -600,11 +600,11 @@ export const eventService = {
         return normalizeEvent(response.data.data);
       }
       
-      throw new Error(response.data.message || 'Gagal membuat acara');
+      throw new Error(response.data.message || 'Failed to create event');
     } catch (error) {
       console.error('Error creating event:', error);
       if (axios.isAxiosError(error) && error.response) {
-        throw new Error(error.response.data.message || 'Gagal membuat acara');
+        throw new Error(error.response.data.message || 'Failed to create event');
       }
       throw error;
     }
@@ -672,10 +672,10 @@ export const eventService = {
         return response.data.data;
       }
       
-      throw new Error(response.data.message || 'Gagal membuat kursi secara massal');
+      throw new Error(response.data.message || 'Failed to create bulk seats');
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
-        throw new Error(error.response.data.message || 'Gagal membuat kursi secara massal');
+        throw new Error(error.response.data.message || 'Failed to create bulk seats');
       }
       throw error;
     }

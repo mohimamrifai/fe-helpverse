@@ -335,7 +335,7 @@ export default function CreateEvent() {
           limit: '50',
           rows: 5, 
           columns: 10,
-          description: `Tiket ${newTicketType.trim()}`,
+          description: `Ticket ${newTicketType.trim()}`,
           category: 'Regular',
           maxPerOrder: '4',
           startDate: today, // Gunakan tanggal hari ini sebagai default
@@ -437,7 +437,7 @@ export default function CreateEvent() {
       // Format tiket sesuai format yang diharapkan
       const formattedTickets = ticketTypes.map(ticket => ({
         name: ticket.name,
-        description: ticket.description || `Tiket ${ticket.name}`,
+        description: ticket.description || `Ticket ${ticket.name}`,
         price: parseInt(ticket.price),
         quantity: ticket.limit ? parseInt(ticket.limit) : ticket.quantity,
         startDate: new Date(ticket.startDate || eventDetails.date).toISOString(),
@@ -489,12 +489,12 @@ export default function CreateEvent() {
         promotionalOffers: formattedPromos.length > 0 ? formattedPromos : []
       };
 
-      console.log('Data yang akan dikirim ke server:', eventData);
+      console.log('Data to be sent to server:', eventData);
       
       // Gunakan createEvent yang sudah ada
       const response = await eventService.createEvent(eventData as any) as unknown as EventResponse;
       
-      console.log('Response dari server:', response);
+      console.log('Response from server:', response);
       
       // Tampilkan modal sukses
       setShowSuccessModal(true);
@@ -503,7 +503,7 @@ export default function CreateEvent() {
       if (error instanceof Error) {
         setSubmitError(error.message);
       } else {
-        setSubmitError('Terjadi kesalahan saat membuat event');
+        setSubmitError('An error occurred while creating the event');
       }
     } finally {
       setIsSubmitting(false);
@@ -583,10 +583,10 @@ export default function CreateEvent() {
                 {/* Error summary jika ada error di step saat ini */}
                 {formTouched && Object.keys(errors).length > 0 && (
                   <div className="mt-3 p-2 sm:p-3 bg-red-50 border border-red-200 rounded-md">
-                    <h3 className="text-xs sm:text-sm font-medium text-red-800">Harap perbaiki error berikut:</h3>
+                    <h3 className="text-xs sm:text-sm font-medium text-red-800">Please fix the following errors:</h3>
                     <ul className="mt-1 text-xs sm:text-sm text-red-700 list-disc list-inside">
                       {Object.values(errors)
-                        .filter(error => error) // Hanya tampilkan error yang ada nilainya
+                        .filter(error => error) // Only show errors that have values
                         .map((error, index) => (
                           <li key={index}>{error}</li>
                         ))}
