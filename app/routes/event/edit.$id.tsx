@@ -100,14 +100,14 @@ export default function EditEvent() {
       setIsLoading(true);
       setLoadError(null);
       
-      // Dapatkan token dari localStorage
+      // Get token from localStorage
       const token = localStorage.getItem('token');
       
       if (!token) {
         throw new Error('User not authenticated');
       }
       
-      // Gunakan axios untuk konsistensi dengan bagian lain dari aplikasi
+      // Use axios for consistency with other parts of the application
       const response = await axios.get(`http://localhost:5000/api/events/${id}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -115,14 +115,14 @@ export default function EditEvent() {
         }
       });
       
-      console.log('API Response:', response.data); // Debug: lihat respons API
+      console.log('API Response:', response.data); // Debug: view API response
       
-      // Periksa keberhasilan respons
+      // Check response success
       if (!response.data.success) {
-        throw new Error(response.data.message || 'Gagal mengambil data event');
+        throw new Error(response.data.message || 'Failed to fetch event data');
       }
       
-      // Gunakan data event dari respons
+      // Use event data from response
       const event = response.data.data;
       
       // Populate event details form
@@ -162,7 +162,7 @@ export default function EditEvent() {
             limit: ticket.quantity?.toString() || '0',
             startDate: ticket.startDate ? new Date(ticket.startDate).toISOString().split('T')[0] : '',
             endDate: ticket.endDate ? new Date(ticket.endDate).toISOString().split('T')[0] : '',
-            saleEndDate: ticket.endDate ? new Date(ticket.endDate).toISOString().split('T')[0] : '', // Tambahkan field saleEndDate
+            saleEndDate: ticket.endDate ? new Date(ticket.endDate).toISOString().split('T')[0] : '', // Add saleEndDate field
             rows: ticket.seatArrangement?.rows || 0,
             columns: ticket.seatArrangement?.columns || 0,
           };
@@ -191,7 +191,7 @@ export default function EditEvent() {
       
     } catch (error) {
       console.error('Error fetching event data:', error);
-      let errorMessage = 'Gagal mengambil data event. Silakan coba lagi.';
+      let errorMessage = 'Failed to fetch event data. Please try again.';
       
       if (axios.isAxiosError(error) && error.response) {
         errorMessage = error.response.data.message || errorMessage;
@@ -455,7 +455,7 @@ export default function EditEvent() {
       )
     );
     
-    // Track field yang sudah disentuh
+    // Track fields that have been touched
     const promoIndex = promotionalOffers.findIndex(p => p.id === id);
     setTouchedFields(prev => ({ 
       ...prev, 
@@ -463,16 +463,16 @@ export default function EditEvent() {
     }));
   };
 
-  // Submit handler untuk update event
+  // Submit handler for updating event
   const handleSubmitEvent = async () => {
     try {
       setIsSubmitting(true);
       setSubmitError(null);
       
-      // Buat FormData
+      // Create FormData
       const formData = new FormData();
       
-      // Tambahkan semua field event details
+      // Add all event details fields
       Object.entries(eventDetails).forEach(([key, value]) => {
         if (key === 'tags' && Array.isArray(value)) {
           formData.append(key, JSON.stringify(value));
@@ -481,7 +481,7 @@ export default function EditEvent() {
         }
       });
       
-      // Tambahkan tiket
+      // Add tickets
       formData.append('tickets', JSON.stringify(ticketTypes.map(ticket => {
         console.log('Processing ticket for submission:', ticket); // Debug log
         return {
@@ -490,7 +490,7 @@ export default function EditEvent() {
           price: parseInt(ticket.price || '0'),
           quantity: parseInt(ticket.limit || '0'),
           startDate: ticket.startDate || undefined,
-          endDate: ticket.endDate || ticket.saleEndDate || undefined, // Gunakan saleEndDate sebagai fallback
+          endDate: ticket.endDate || ticket.saleEndDate || undefined, // Use saleEndDate as fallback
           seatArrangement: {
             rows: ticket.rows || 0,
             columns: ticket.columns || 0
@@ -499,7 +499,7 @@ export default function EditEvent() {
         };
       })));
       
-      // Tambahkan promo jika ada
+      // Add promos if any
       if (promotionalOffers.length > 0) {
         formData.append('promotionalOffers', JSON.stringify(promotionalOffers.map(promo => ({
           name: promo.name,
@@ -514,12 +514,12 @@ export default function EditEvent() {
         }))));
       }
       
-      // Tambahkan gambar jika ada yang baru diupload
+      // Add image if a new one was uploaded
       if (imageFile) {
         formData.append('image', imageFile);
       }
       
-      // Kirim request update ke API
+      // Send update request to API
       const token = localStorage.getItem('token');
       
       if (!token) {
@@ -539,7 +539,7 @@ export default function EditEvent() {
         throw new Error(errorData.message || 'Failed to update event');
       }
       
-      // Tampilkan modal sukses
+      // Show success modal
       setShowSuccessModal(true);
       
     } catch (error) {

@@ -1,64 +1,64 @@
 import axios from 'axios';
 
-// Definisi tipe untuk event
+// Type definition for event
 export interface Event {
   id: string;
   _id: string;
-  name: string;           // Diubah dari title menjadi name sesuai dokumentasi
+  name: string;           // Changed from title to name according to documentation
   description: string;
-  date: Date;             // Diubah dari string menjadi Date
+  date: Date;             // Changed from string to Date
   time: string;
-  location: string;       // Diubah dari venue menjadi location
+  location: string;       // Changed from venue to location
   address: string;
-  image: string | File;   // Mendukung string (path) dan File object
+  image: string | File;   // Supports string (path) and File object
   totalSeats: number;
   availableSeats: number;
-  tickets: Ticket[];      // Diubah dari ticketTypes menjadi tickets
-  createdBy: User;        // Ditambahkan sesuai dokumentasi
-  tags: string[];         // Ditambahkan sesuai dokumentasi
+  tickets: Ticket[];      // Changed from ticketTypes to tickets
+  createdBy: User;        // Added according to documentation
+  tags: string[];         // Added according to documentation
   published: boolean;
   approvalStatus: string;
   approvalNotes: string;
   promotionalOffers?: PromotionalOffer[];
   seatArrangement?: SeatArrangement;
-  createdAt: Date;        // Diubah dari string menjadi Date
-  updatedAt: Date;        // Ditambahkan sesuai dokumentasi
+  createdAt: Date;        // Changed from string to Date
+  updatedAt: Date;        // Added according to documentation
 }
 
-// Definisi tipe untuk tipe tiket
-export interface Ticket {  // Diubah nama dari TicketType menjadi Ticket
+// Type definition for ticket type
+export interface Ticket {  // Changed name from TicketType to Ticket
   _id: string;
   id: string;
   name: string;
   description: string;
-  price: number;          // Diubah dari string menjadi number
-  quantity: number;       // Diubah dari available dan total menjadi quantity
-  startDate?: Date;       // Ditambahkan sesuai dokumentasi
-  endDate?: Date;         // Ditambahkan sesuai dokumentasi
+  price: number;          // Changed from string to number
+  quantity: number;       // Changed from available and total to quantity
+  startDate?: Date;       // Added according to documentation
+  endDate?: Date;         // Added according to documentation
   seatArrangement?: {
     rows: number;
     columns: number;
-    lastRowColumns?: number; // Jumlah kolom di baris terakhir (jika tidak penuh)
+    lastRowColumns?: number; // Number of columns in the last row (if not full)
   };
-  bookedSeats?: BookedSeat[]; // Ditambahkan sesuai dokumentasi
+  bookedSeats?: BookedSeat[]; // Added according to documentation
 }
 
-// Definisi tipe untuk kursi yang sudah dipesan
+// Type definition for booked seats
 export interface BookedSeat {
   row: number;
   column: number;
   bookingId: string;
 }
 
-// Definisi tipe untuk pengaturan kursi
+// Type definition for seat arrangement
 export interface SeatArrangement {
   rows: number;
   columns: number;
-  lastRowColumns?: number; // Jumlah kolom di baris terakhir (jika tidak penuh)
+  lastRowColumns?: number; // Number of columns in the last row (if not full)
   seats: SeatInfo[];
 }
 
-// Definisi tipe untuk informasi kursi
+// Type definition for seat information
 export interface SeatInfo {
   id: string;
   row: string;
@@ -68,7 +68,7 @@ export interface SeatInfo {
   ticketTypeId?: string;
 }
 
-// Definisi tipe untuk user
+// Type definition for user
 export interface User {
   _id: string;
   username: string;
@@ -79,14 +79,14 @@ export interface User {
   role: 'user' | 'eventOrganizer' | 'admin';
 }
 
-// Definisi tipe untuk organizer (deprecated - digantikan User)
+// Type definition for organizer (deprecated - replaced by User)
 export interface Organizer {
   _id: string;
   name: string;
   email: string;
 }
 
-// Definisi tipe untuk promotional offer
+// Type definition for promotional offer
 export interface PromotionalOffer {
   _id: string;
   name: string;
@@ -101,20 +101,20 @@ export interface PromotionalOffer {
   active: boolean;
 }
 
-// Definisi tipe untuk parameter booking
+// Type definition for booking parameters
 export interface BookingParams {
   ticketTypeId: string;
   seats: string[];
   quantity: number;
 }
 
-// Base URL dari API
+// Base URL for API
 const API_URL = 'http://localhost:5000';
 
-// Fungsi untuk mengambil token dari localStorage
+// Function to get token from localStorage
 const getToken = () => localStorage.getItem('token');
 
-// Axios instance dengan header Authorization
+// Axios instance with Authorization header
 const api = axios.create({
   baseURL: API_URL,
   headers: {
@@ -122,7 +122,7 @@ const api = axios.create({
   },
 });
 
-// Interceptor untuk menambahkan token pada setiap request
+// Interceptor to add token to every request
 api.interceptors.request.use(
   (config) => {
     const token = getToken();
@@ -134,21 +134,21 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Adapter untuk mengubah format event
+// Adapter to transform event format
 const normalizeEvent = (eventData: any): Event => {
-  // Pastikan tickets adalah array
+  // Make sure tickets is an array
   const tickets = Array.isArray(eventData.tickets) 
     ? eventData.tickets
     : (Array.isArray(eventData.ticketTypes) ? eventData.ticketTypes : []);
   
-  // Petakan tiket untuk memastikan semua properti yang dibutuhkan ada
+  // Map tickets to ensure all required properties exist
   const normalizedTickets = tickets.map((ticket: any) => {
-    // Jika tiket hanya berupa ID string, buat objek kosong
+    // If ticket is just a string ID, create an empty object
     if (typeof ticket === 'string') {
       return {
         _id: ticket,
         id: ticket,
-        name: `Tiket ${ticket.substr(-4)}`,
+        name: `Ticket ${ticket.substr(-4)}`,
         description: '',
         price: 0,
         quantity: 0,
@@ -163,7 +163,7 @@ const normalizeEvent = (eventData: any): Event => {
     return {
       _id: ticket._id || ticket.id,
       id: ticket.id || ticket._id,
-      name: ticket.name || `Tiket ${(ticket._id || ticket.id).substr(-4)}`,
+      name: ticket.name || `Ticket ${(ticket._id || ticket.id).substr(-4)}`,
       description: ticket.description || '',
       price: typeof ticket.price === 'string' ? parseFloat(ticket.price) : (ticket.price || 0),
       quantity: ticket.quantity || ticket.available || 0,

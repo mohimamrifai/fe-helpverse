@@ -9,10 +9,10 @@ import axios from 'axios';
 import { WaitlistTicketModal } from '~/components/WaitlistTicketModal';
 import { ManageWaitlistModal } from '~/components/ManageWaitlistModal';
 
-// API endpoint sesuai dengan dokumentasi API
+// API endpoint according to the API documentation
 const API_URL = 'http://localhost:5000/api/events/my-events';
 
-// Definisi tipe untuk event yang ditampilkan di halaman
+// Define type for events displayed on the page
 interface DisplayEvent {
   id: string;
   _id: string;
@@ -32,7 +32,7 @@ interface DisplayEvent {
   tags: string[];
 }
 
-// Interface untuk pagination dari API
+// Interface for pagination from API
 interface PaginationData {
   next?: {
     page: number;
@@ -63,12 +63,12 @@ export default function MyEventsPage(): React.ReactElement {
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   const navigate = useNavigate();
   
-  // State untuk modal waitlist
+  // State for waitlist modal
   const [showWaitlistTicketModal, setShowWaitlistTicketModal] = useState(false);
   const [showManageWaitlistModal, setShowManageWaitlistModal] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string>('');
   
-  // State untuk pagination
+  // State for pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalEvents, setTotalEvents] = useState(0);
@@ -80,20 +80,20 @@ export default function MyEventsPage(): React.ReactElement {
       setLoading(true);
       setError(null);
 
-      // Mendapatkan token user dari localStorage
+      // Get user token from localStorage
       const token = localStorage.getItem('token');
 
       if (!token) {
         throw new Error('User not authenticated');
       }
 
-      // Menyiapkan parameter query hanya untuk pagination
+      // Prepare query parameters for pagination only
       const queryParams = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString()
       });
 
-      // Menggunakan axios untuk mengambil data event milik organizer
+      // Use axios to fetch event data for the organizer
       const response = await axios.get(`${API_URL}?${queryParams}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -145,7 +145,7 @@ export default function MyEventsPage(): React.ReactElement {
       } else {
         setError(err instanceof Error ? err.message : 'Failed to fetch event data');
       }
-      // Set array events kosong jika terjadi error
+      // Set empty events array if there's an error
       setEvents([]);
     } finally {
       setLoading(false);
@@ -192,7 +192,7 @@ export default function MyEventsPage(): React.ReactElement {
         setModalMessage('Event successfully deleted');
         setShowModal(true);
         
-        // Perbarui data setelah menghapus event
+        // Update data after deleting event
         fetchEvents(currentPage, itemsPerPage);
       } else {
         throw new Error(response.data.message || 'Failed to delete event');
@@ -217,7 +217,7 @@ export default function MyEventsPage(): React.ReactElement {
     }
   };
 
-  // Fungsi-fungsi untuk navigasi pagination
+  // Functions for pagination navigation
   const goToNextPage = () => {
     if (currentPage < totalPages) {
       fetchEvents(currentPage + 1, itemsPerPage);
@@ -230,13 +230,13 @@ export default function MyEventsPage(): React.ReactElement {
     }
   };
 
-  // Fungsi untuk menampilkan modal waitlist ticket
+  // Function to show waitlist ticket modal
   const handleShowWaitlistTicketModal = (eventId: string) => {
     setSelectedEventId(eventId);
     setShowWaitlistTicketModal(true);
   };
 
-  // Fungsi untuk menampilkan modal manage waitlist
+  // Function to show manage waitlist modal
   const handleShowManageWaitlistModal = (eventId: string) => {
     setSelectedEventId(eventId);
     setShowManageWaitlistModal(true);
@@ -354,14 +354,14 @@ export default function MyEventsPage(): React.ReactElement {
           </div>
         )}
 
-        {/* Modal untuk Waitlist Ticket */}
+        {/* Modal for Waitlist Ticket */}
         <WaitlistTicketModal 
           isOpen={showWaitlistTicketModal}
           eventId={selectedEventId}
           onClose={() => setShowWaitlistTicketModal(false)}
         />
 
-        {/* Modal untuk Manage Waitlist */}
+        {/* Modal for Manage Waitlist */}
         <ManageWaitlistModal 
           isOpen={showManageWaitlistModal}
           eventId={selectedEventId}

@@ -224,13 +224,9 @@ export default function MyBookingsPage(): React.ReactElement {
   
   // Helper function to get month index from month name
   const getMonthIndex = (monthName: string): number => {
-    const monthsID = ['januari', 'februari', 'maret', 'april', 'mei', 'juni', 'juli', 'agustus', 'september', 'oktober', 'november', 'desember'];
     const monthsEN = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
     
     const lowerMonthName = monthName.toLowerCase();
-    
-    const idIndex = monthsID.indexOf(lowerMonthName);
-    if (idIndex !== -1) return idIndex;
     
     const enIndex = monthsEN.indexOf(lowerMonthName);
     if (enIndex !== -1) return enIndex;
@@ -300,7 +296,7 @@ export default function MyBookingsPage(): React.ReactElement {
                 )}
               </div>
               <h2 className="text-xl font-semibold mb-2 text-center">
-                {modalType === 'success' ? 'Berhasil' : 'Gagal'}
+                {modalType === 'success' ? 'Success' : 'Failed'}
               </h2>
               <p className="text-gray-600 mb-6 text-center">{modalMessage}</p>
               <div className="text-center">
@@ -308,7 +304,7 @@ export default function MyBookingsPage(): React.ReactElement {
                   onClick={() => setShowModal(false)}
                   className="bg-primary text-white px-6 py-2 rounded-full inline-block"
                 >
-                  Tutup
+                  Close
                 </button>
               </div>
             </div>
