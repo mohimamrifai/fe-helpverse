@@ -505,12 +505,44 @@ function AdminReportContent() {
                   eventDateMap.set(dateKey, []);
                 }
                 
+                // Durasi dari data API - sesuai dokumentasi API, event memiliki durasi rata-rata 3 jam
+                // jika tidak ada data eksplisit
+                const eventDuration = event.usageHours > 0 ? event.usageHours : 
+                                       event.duration > 0 ? event.duration : 3;
+                
                 eventDateMap.get(dateKey).push({
                   _id: event._id || event.id,
                   name: event.name,
-                  duration: event.usageHours || event.duration || 0
+                  duration: eventDuration
                 });
               });
+              
+              // Log untuk debug
+              console.log('Sample event data:', 
+                Array.from(eventDateMap.entries())
+                  .slice(0, 2)
+                  .map(([date, events]) => ({
+                    date,
+                    eventCount: events.length,
+                    totalDuration: events.reduce((sum: number, e: any) => sum + e.duration, 0)
+                  }))
+              );
+              
+              // Dapatkan semua tanggal dalam rentang yang dipilih
+              const fromDate = new Date(dateRange.from);
+              const toDate = new Date(dateRange.to);
+              fromDate.setHours(0, 0, 0, 0);
+              toDate.setHours(23, 59, 59, 999);
+              
+              const allDatesInRange = new Set<string>();
+              const currentDate = new Date(fromDate);
+              
+              // Iterasi semua tanggal dalam rentang
+              while (currentDate <= toDate) {
+                const dateKey = currentDate.toISOString().split('T')[0];
+                allDatesInRange.add(dateKey);
+                currentDate.setDate(currentDate.getDate() + 1);
+              }
               
               // Filter utilization data untuk hanya menyertakan data yang valid
               const filteredUtilization = data.data ? data.data.filter((item: UtilizationData) => {
@@ -523,52 +555,101 @@ function AdminReportContent() {
                 return hasValidData;
               }) : [];
               
-              // Enhance utilization data dengan event
-              const enhancedUtilization = filteredUtilization.map((item: UtilizationData) => {
-                // Get tanggal dalam format YYYY-MM-DD
+              // Buat Map untuk menyimpan utilization berdasarkan tanggal
+              const utilizationByDate = new Map<string, UtilizationData>();
+              
+              // Tambahkan utilization data yang ada ke Map
+              filteredUtilization.forEach((item: UtilizationData) => {
                 const utilizationDate = new Date(item.date);
                 const dateKey = utilizationDate.toISOString().split('T')[0];
-                
-                // Dapatkan event untuk tanggal ini (jika ada)
-                const eventsForDate = eventDateMap.get(dateKey) || [];
-                
-                // Jika ada event yang tidak ada di item.events, tambahkan
-                const currentEventIds = new Set(item.events || []);
-                const updatedEvents = [...currentEventIds];
-                
-                // Hitung total jam berdasarkan durasi aktual event
-                let additionalHours = 0;
-                
-                eventsForDate.forEach((event: any) => {
-                  if (!currentEventIds.has(event._id)) {
-                    updatedEvents.push(event._id);
-                    
-                    // Tambahkan durasi event ke total jam
-                    if (event.duration && event.duration > 0) {
-                      additionalHours += event.duration;
-                    }
-                  }
-                });
-                
-                // Jika tidak ada durasi yang valid, gunakan hours_used dari API
-                const totalHoursUsed = additionalHours > 0 ? 
-                  Math.max(item.total_hours_used, additionalHours) : 
-                  item.total_hours_used;
-                
-                // Hitung utilization percentage berdasarkan total jam
-                const utilizationPercentage = item.total_hours_available > 0 ?
-                  Math.min(Math.max((totalHoursUsed / item.total_hours_available) * 100, item.utilization_percentage), 100) :
-                  item.utilization_percentage;
-                
-                // Return item dengan data yang sudah diupdate
-                return {
-                  ...item,
-                  events: updatedEvents,
-                  total_hours_used: totalHoursUsed,
-                  utilization_percentage: utilizationPercentage
-                };
+                utilizationByDate.set(dateKey, item);
               });
               
+              // Buat array hasil akhir dengan data yang diperkaya
+              const enhancedUtilization: UtilizationData[] = [];
+              
+              // Iterasi setiap tanggal dalam rentang dan buat atau perbarui data utilization
+              allDatesInRange.forEach((dateKey) => {
+                const eventsForDate = eventDateMap.get(dateKey) || [];
+                const existingUtilization = utilizationByDate.get(dateKey);
+                
+                if (existingUtilization) {
+                  // Jika ada data utilization yang sudah ada, perbarui dengan event baru
+                  const currentEventIds = new Set(existingUtilization.events || []);
+                  const updatedEvents = [...currentEventIds];
+                  
+                  // Hitung total jam berdasarkan durasi aktual event
+                  let additionalHours = 0;
+                  
+                  eventsForDate.forEach((event: any) => {
+                    if (!currentEventIds.has(event._id)) {
+                      updatedEvents.push(event._id);
+                      
+                      // Durasi event sudah pasti ada (default 3 jam dari langkah sebelumnya)
+                      additionalHours += event.duration;
+                    }
+                  });
+                  
+                  // Hitung total jam yang digunakan
+                  const totalHoursUsed = additionalHours > 0 ? 
+                    Math.max(existingUtilization.total_hours_used, additionalHours) : 
+                    existingUtilization.total_hours_used;
+                  
+                  // Hitung utilization percentage berdasarkan total jam
+                  const utilizationPercentage = existingUtilization.total_hours_available > 0 ?
+                    Math.min(Math.max((totalHoursUsed / existingUtilization.total_hours_available) * 100, existingUtilization.utilization_percentage), 100) :
+                    existingUtilization.utilization_percentage;
+                  
+                  // Tambahkan item yang sudah diperbarui
+                  enhancedUtilization.push({
+                    ...existingUtilization,
+                    events: updatedEvents,
+                    total_hours_used: totalHoursUsed,
+                    utilization_percentage: utilizationPercentage
+                  });
+                } else if (eventsForDate.length > 0) {
+                  // Jika tidak ada data utilization tapi ada event, buat data baru
+                  interface EventWithId {
+                    _id: string;
+                    name?: string;
+                    duration: number;
+                  }
+                  
+                  const eventIds = eventsForDate.map((event: EventWithId) => event._id);
+                  
+                  // Hitung total jam - durasi event sudah ada dari langkah sebelumnya (default 3 jam)
+                  const totalHoursUsed = eventsForDate.reduce((sum: number, event: EventWithId) => 
+                    sum + event.duration, 0);
+                  
+                  // Sesuai dokumentasi API, default jam tersedia per hari
+                  const totalHoursAvailable = 16; // 8:00 - 00:00
+                  const utilizationPercentage = (totalHoursUsed / totalHoursAvailable) * 100;
+                  
+                  // Buat date dari dateKey
+                  const dateParts = dateKey.split('-');
+                  const utilizationDate = new Date(
+                    parseInt(dateParts[0]), 
+                    parseInt(dateParts[1]) - 1, // Bulan dimulai dari 0
+                    parseInt(dateParts[2])
+                  );
+                  
+                  // Tambahkan data utilization baru
+                  enhancedUtilization.push({
+                    date: utilizationDate.toISOString(),
+                    total_hours_used: totalHoursUsed,
+                    total_hours_available: totalHoursAvailable,
+                    utilization_percentage: utilizationPercentage,
+                    events: eventIds
+                  });
+                }
+              });
+              
+              // Urutkan utilization berdasarkan tanggal
+              enhancedUtilization.sort((a, b) => {
+                return new Date(a.date).getTime() - new Date(b.date).getTime();
+              });
+              
+              console.log('Enhanced utilization data with all events:', enhancedUtilization.length);
               setUtilization(enhancedUtilization);
               return;
             }
