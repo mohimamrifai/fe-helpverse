@@ -142,6 +142,10 @@ function ReportPageContent() {
         }
       });
       
+      if (response.status === 401) {
+        throw new Error('Your session has expired. Please login again.');
+      }
+      
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
         throw new Error(errorData?.message || `Error ${response.status}: ${response.statusText}`);
@@ -160,8 +164,13 @@ function ReportPageContent() {
         
         console.log('Parsed event options:', eventOptions);
         
-        // Tambahkan opsi "All Events" di awal
-        setEvents([{ id: "all", name: "All Events" }, ...eventOptions]);
+        if (eventOptions.length === 0) {
+          console.warn('No events found for this organizer');
+          setEvents([{ id: "all", name: "All Events" }]);
+        } else {
+          // Tambahkan opsi "All Events" di awal
+          setEvents([{ id: "all", name: "All Events" }, ...eventOptions]);
+        }
       } else {
         console.warn('No event data found or invalid format:', data);
         setEvents([{ id: "all", name: "All Events" }]);
@@ -204,9 +213,18 @@ function ReportPageContent() {
       
       // Buat URL dengan parameter eventId jika event tertentu dipilih
       let url = '/api/reports/all';
+      const params = new URLSearchParams();
+      
       if (selectedEvent !== "all") {
-        url += `?eventId=${selectedEvent}`;
+        params.append('eventId', selectedEvent);
       }
+      
+      // Tambahkan parameter ke URL jika ada
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+      
+      console.log(`Loading all reports with URL: ${url}`);
       
       // Ambil data dari endpoint /api/reports/all dengan atau tanpa parameter eventId
       const response = await fetch(url, {
@@ -228,16 +246,35 @@ function ReportPageContent() {
       }
       
       const data = await response.json();
+      console.log('API response data for all reports:', data);
       
-      // Cek jika API mengembalikan pesan "No data available"
-      if (data.message && data.message === "No data available.") {
-        console.warn('API mengembalikan: No data available.');
+      // Cek jika API mengembalikan pesan error terkait event
+      if (data.message && data.message.includes("Event not found")) {
+        setNoDataMessage(data.message);
         setReport(null);
         setTableData([]);
         return;
       }
       
-      if (data && data.totalOrders !== undefined) {
+      // Cek jika API mengembalikan pesan "No data available"
+      if (data.message && data.message === "No data available.") {
+        console.warn('API mengembalikan: No data available.');
+        setNoDataMessage("No data available for the selected filters.");
+        setReport(null);
+        setTableData([]);
+        return;
+      }
+      
+      // Cek jika tidak ada data bermakna dalam respons
+      if (data && data.ticketsSold === 0 && data.revenue === 0 && 
+          (!data.ordersByDate || Object.keys(data.ordersByDate).length === 0)) {
+        setNoDataMessage("No sales data found for the selected event. Try selecting a different event or date range.");
+        setReport(null);
+        setTableData([]);
+        return;
+      }
+      
+      if (data) {
         // Format data untuk tampilan report
         const allReportData = {
           ticketsSold: data.ticketsSold || 0,
@@ -258,6 +295,14 @@ function ReportPageContent() {
             percentage: data.occupancyByDate[date] || data.occupancyPercentage
           })) : []
         };
+        
+        // Debugging log untuk data yang telah diproses
+        console.log('Processed report data:', {
+          ticketsSold: allReportData.ticketsSold,
+          revenue: allReportData.revenue,
+          salesDataPoints: allReportData.salesData.length,
+          revenueDataPoints: allReportData.revenueData.length
+        });
         
         // Set report sebagai weekly report untuk tampilan
         setReport({
@@ -305,6 +350,7 @@ function ReportPageContent() {
         console.warn('API mengembalikan data yang tidak sesuai format yang diharapkan:', data);
         
         // Set report ke null agar tampilkan pesan "Tidak ada data"
+        setNoDataMessage("Received invalid data format from server.");
         setReport(null);
         setTableData([]);
       }
@@ -312,6 +358,7 @@ function ReportPageContent() {
       console.error('Failed to load all reports:', err);
       
       // Set report ke null agar tampilkan pesan "Tidak ada data"
+      setError(err.message || "Failed to load report data. Please try again later.");
       setReport(null);
       setTableData([]);
     } finally {
@@ -349,9 +396,6 @@ function ReportPageContent() {
         throw new Error('Token not found. Please login again.');
       }
       
-      // Debug mode - cek token
-      console.log('Using token for download (first 10 chars):', token.substring(0, 10) + '...');
-      
       // Buat query parameters
       const params = new URLSearchParams();
       
@@ -376,8 +420,8 @@ function ReportPageContent() {
         params.append('eventId', selectedEvent);
       }
       
-      // Debug mode - log parameter yang dikirim
-      console.log(`Attempting download: /api/reports/download?${params.toString()}`);
+      // Log parameter untuk debugging
+      console.log(`Downloading report with parameters: ${params.toString()}`);
       
       // Buat fetch request dengan explicit headers
       const response = await fetch(`/api/reports/download?${params.toString()}`, {
@@ -400,7 +444,27 @@ function ReportPageContent() {
         throw new Error('Your session has expired. Please login again.');
       }
       
-      // Handle error
+      // Periksa apakah ada pesan error terkait event
+      if (response.status === 200 || response.status === 400) {
+        const contentType = response.headers.get('content-type');
+        
+        // Jika server mengembalikan JSON, periksa apakah itu pesan error
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          
+          if (data.message) {
+            if (data.message.includes("Event not found")) {
+              throw new Error(data.message);
+            } else if (data.message.includes("Insufficient data")) {
+              throw new Error('No data available for the selected period. Please select a different date range.');
+            }
+          }
+          
+          throw new Error('Server returned data in an unexpected format.');
+        }
+      }
+      
+      // Handle error umum
       if (!response.ok) {
         // Coba baca pesan error
         const errorText = await response.text();
@@ -432,6 +496,11 @@ function ReportPageContent() {
       // Ambil data sebagai blob
       const blob = await response.blob();
       console.log('Blob size:', blob.size, 'bytes');
+      
+      // Jika blob kosong atau terlalu kecil
+      if (blob.size < 100) {
+        throw new Error('The downloaded file appears to be empty or invalid');
+      }
       
       // Cari nama file dari header content-disposition
       let filename = `report-${downloadType}-${downloadType !== 'weekly' && downloadType !== 'all' as string ? formattedDate : 'current'}.pdf`;
@@ -479,6 +548,25 @@ function ReportPageContent() {
       return;
     }
     
+    console.log('Filter changed - reloading report with:', {
+      reportType,
+      selectedDate,
+      selectedEvent
+    });
+    
+    // Reset data saat memilih event baru atau mengubah tipe report
+    if (selectedEvent !== "all" || reportType !== "monthly") {
+      // Reset semua data untuk memastikan tampilan konsisten dengan filter baru
+      setNoDataMessage("Loading data for selected filters...");
+      setReport(null);
+      setTableData([]);
+      
+      // Jika tabel sedang terbuka, tutup untuk hindari menampilkan data lama
+      if (showTable) {
+        setShowTable(false);
+      }
+    }
+    
     // Jalankan loadReport saat filter berubah 
     loadReport();
   }, [reportType, selectedDate, selectedEvent]);
@@ -518,6 +606,7 @@ function ReportPageContent() {
     setLoading(true);
     setError(null);
     setNoDataMessage(null);
+    setTableData([]); // Reset table data ketika filter berubah
     
     try {
       const token = localStorage.getItem('token');
@@ -557,10 +646,11 @@ function ReportPageContent() {
         params.append('eventId', selectedEvent);
       }
       
-      console.log(`Loading report with params: ${params.toString()}, URL: /api/reports/${reportType}?${params.toString()}`);
+      const url = `/api/reports/${reportType}?${params.toString()}`;
+      console.log(`Loading report with URL: ${url}`);
       
       // Buat fetch request
-      const response = await fetch(`/api/reports/${reportType}?${params.toString()}`, {
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -579,6 +669,15 @@ function ReportPageContent() {
       }
       
       const data = await response.json();
+      console.log(`API response data for ${reportType} report:`, data);
+      
+      // Jika API mengembalikan pesan error terkait event
+      if (data.message && data.message.includes("Event not found")) {
+        setNoDataMessage(data.message);
+        setReport(null);
+        setTableData([]);
+        return;
+      }
       
       // Jika tidak ada data untuk filter, tampilkan pesan no data
       if (data.message && data.message.includes("Insufficient data")) {
@@ -682,7 +781,10 @@ function ReportPageContent() {
             seatsFilledPercent: seatsFilledPercent
           };
         });
+        
+        // Pastikan tableData merefleksikan data yang difilter
         setTableData(tableRows);
+        console.log('Table data set with rows:', tableRows.length, 'for all reports');
       } else {
         // Fallback jika tidak ada data tanggal
         setTableData([{
@@ -692,6 +794,7 @@ function ReportPageContent() {
           revenue: allReportData.revenue,
           seatsFilledPercent: allReportData.ticketsSold === 0 ? 0 : formatPercentage(allReportData.occupancyPercentage || 0)
         }]);
+        console.log('Table data set with single row fallback for all reports');
       }
     } else {
       console.log('Processing standard report format', reportType);
@@ -710,26 +813,36 @@ function ReportPageContent() {
       
       if (reportType === "daily") {
         const dailyData = data as DailyReport;
-        setTableData([{
+        
+        // Untuk laporan harian, buat baris tunggal
+        const tableData = [{
           id: "1",
           date: dailyData.date,
           ticketsSold: dailyData.ticketsSold || 0,
           revenue: dailyData.revenue || 0,
           seatsFilledPercent: dailyData.ticketsSold === 0 ? 0 : formatPercentage(dailyData.occupancyPercentage || 0)
-        }]);
+        }];
+        
+        setTableData(tableData);
+        console.log('Table data set for daily report:', tableData);
       } else if (reportType === "weekly") {
         const weeklyData = data as WeeklyReport;
         
         // Pastikan ada salesData sebelum memproses
         if (!weeklyData.salesData || weeklyData.salesData.length === 0) {
           console.warn('No sales data for weekly report:', weeklyData);
-          setTableData([{
+          
+          // Buat satu baris dengan total data
+          const tableData = [{
             id: "1",
             date: `${weeklyData.startDate} - ${weeklyData.endDate}`,
             ticketsSold: weeklyData.ticketsSold || 0,
             revenue: weeklyData.revenue || 0,
             seatsFilledPercent: weeklyData.ticketsSold === 0 ? 0 : formatPercentage(weeklyData.occupancyPercentage || 0)
-          }]);
+          }];
+          
+          setTableData(tableData);
+          console.log('Table data set with single row for weekly report without sales data');
           return;
         }
         
@@ -751,20 +864,27 @@ function ReportPageContent() {
             seatsFilledPercent: seatsFilledPercent
           };
         });
+        
         setTableData(tableRows);
+        console.log('Table data set for weekly report with rows:', tableRows.length);
       } else if (reportType === "monthly") {
         const monthlyData = data as MonthlyReport;
         
         // Pastikan ada salesData sebelum memproses
         if (!monthlyData.salesData || monthlyData.salesData.length === 0) {
           console.warn('No sales data for monthly report:', monthlyData);
-          setTableData([{
+          
+          // Buat satu baris dengan total data
+          const tableData = [{
             id: "1",
             date: `${monthlyData.year}-${monthlyData.month.toString().padStart(2, '0')}`,
             ticketsSold: monthlyData.ticketsSold || 0,
             revenue: monthlyData.revenue || 0,
             seatsFilledPercent: monthlyData.ticketsSold === 0 ? 0 : formatPercentage(monthlyData.occupancyPercentage || 0)
-          }]);
+          }];
+          
+          setTableData(tableData);
+          console.log('Table data set with single row for monthly report without sales data');
           return;
         }
         
@@ -787,7 +907,9 @@ function ReportPageContent() {
             seatsFilledPercent: seatsFilledPercent
           };
         });
+        
         setTableData(tableRows);
+        console.log('Table data set for monthly report with rows:', tableRows.length);
       }
     }
   };
@@ -841,7 +963,73 @@ function ReportPageContent() {
 
   const toggleTable = () => {
     setShowTable(!showTable);
+    
+    // Saat membuka tabel, pastikan data sudah sesuai dengan filter saat ini
+    if (!showTable && report) {
+      console.log('Table toggled to show with current data:', { 
+        filter: { reportType, selectedEvent },
+        rowCount: tableData.length
+      });
+    }
   };
+
+  // Komponen untuk tabel detail
+  const DetailedDataTable = () => {
+    // Jika tidak ada data, tampilkan pesan
+    if (!report || tableData.length === 0) {
+      return (
+        <div className="p-4 text-center text-sm text-gray-500">
+          No detailed data available for the current filters.
+        </div>
+      );
+    }
+
+    return (
+      <div className="overflow-x-auto overflow-y-auto max-h-64">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50 sticky top-0 z-10">
+            <tr>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tickets Sold</th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seats Filled</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {tableData.map((row) => (
+              <tr key={row.id} className="hover:bg-gray-50">
+                <td className="px-4 py-2 whitespace-nowrap text-xs text-gray-500">{row.date}</td>
+                <td className="px-4 py-2 whitespace-nowrap text-xs text-gray-500">{row.ticketsSold}</td>
+                <td className="px-4 py-2 whitespace-nowrap text-xs text-gray-500">{formatCurrency(row.revenue)}</td>
+                <td className="px-4 py-2 whitespace-nowrap text-xs text-gray-500">{row.seatsFilledPercent}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  // Pastikan data konsisten saat awal render
+  useEffect(() => {
+    // Jika tidak ada data tabel, tapi ada report, coba load ulang data
+    if (tableData.length === 0 && report) {
+      console.log('Table data empty but report exists, processing report data again');
+      processReportData(report);
+    }
+  }, [report, tableData]);
+  
+  // Pastikan filter yang tersimpan tetap konsisten
+  useEffect(() => {
+    // Log untuk debugging
+    console.log('Current state:', {
+      reportType,
+      selectedEvent: selectedEvent,
+      eventName: events.find(e => e.id === selectedEvent)?.name || 'All Events',
+      tableDataCount: tableData.length,
+      hasReport: report !== null
+    });
+  }, [reportType, selectedEvent, events, tableData, report]);
 
   return (
     <div className="min-h-screen flex flex-col bg-secondary">
@@ -904,6 +1092,11 @@ function ReportPageContent() {
                   </option>
                 ))}
               </select>
+              {selectedEvent !== "all" && (
+                <p className="mt-1 text-xs text-blue-600">
+                  Showing data for selected event only
+                </p>
+              )}
             </div>
             
             {/* Date Picker (tidak ditampilkan untuk weekly report dan all report) */}
@@ -957,8 +1150,13 @@ function ReportPageContent() {
         
         {/* Loading indicator */}
         {loading && (
-          <div className="w-full flex justify-center py-8">
-            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-secondary"></div>
+          <div className="w-full flex flex-col items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-secondary mb-2"></div>
+            <p className="text-sm text-gray-600">
+              {selectedEvent !== "all" 
+                ? `Loading data for "${events.find(e => e.id === selectedEvent)?.name || 'selected event'}"...` 
+                : "Loading report data..."}
+            </p>
           </div>
         )}
         
@@ -991,6 +1189,11 @@ function ReportPageContent() {
                           : 'All Time Report')
                         : (report as DailyReport).date || 'All Time'
                   }</span>
+                  {selectedEvent !== "all" && (
+                    <span className="block text-xs font-medium text-blue-600 mt-1">
+                      {events.find(e => e.id === selectedEvent)?.name || 'Selected Event'}
+                    </span>
+                  )}
                 </div>
               </div>
               
@@ -1008,6 +1211,11 @@ function ReportPageContent() {
                 </div>
                 <div className="mt-1">
                   <span className="text-xs text-gray-500">{getReportTypeLabel()} | {selectedEvent === "all" ? "All Events" : events.find(e => e.id === selectedEvent)?.name || "Selected Event"}</span>
+                  {selectedEvent !== "all" && (
+                    <span className="block text-xs font-medium text-blue-600 mt-1">
+                      Filtered data for one event only
+                    </span>
+                  )}
                 </div>
               </div>
               
@@ -1212,28 +1420,7 @@ function ReportPageContent() {
               </div>
               
               <div className={`transition-all duration-300 ${showTable ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
-                <div className="overflow-x-auto overflow-y-auto max-h-64">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50 sticky top-0 z-10">
-                      <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tickets Sold</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seats Filled</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {tableData.map((row) => (
-                        <tr key={row.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-2 whitespace-nowrap text-xs text-gray-500">{row.date}</td>
-                          <td className="px-4 py-2 whitespace-nowrap text-xs text-gray-500">{row.ticketsSold}</td>
-                          <td className="px-4 py-2 whitespace-nowrap text-xs text-gray-500">{formatCurrency(row.revenue)}</td>
-                          <td className="px-4 py-2 whitespace-nowrap text-xs text-gray-500">{row.seatsFilledPercent}%</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <DetailedDataTable />
               </div>
             </div>
           </div>
