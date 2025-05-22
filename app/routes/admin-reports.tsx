@@ -61,6 +61,7 @@ function AdminReportContent() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState<boolean>(false);
+  const [knownEventIds, setKnownEventIds] = useState<Map<string, string>>(new Map());
   
   // Theme colors for consistent UI
   const THEME_COLORS = {
@@ -324,8 +325,11 @@ function AdminReportContent() {
                 occupancy = (event.ticketsSold / event.totalSeats) * 100;
               }
               
-              // Gunakan data durasi dari event jika tersedia
-              const usageHours = event.usageHours || event.duration || 0;
+              // Gunakan data durasi dari event jika tersedia, atau default 3 jam sesuai dokumentasi API
+              // Dari dokumentasi: "Setiap event diasumsikan memiliki durasi rata-rata 3 jam"
+              const usageHours = 
+                (typeof event.usageHours === 'number' && event.usageHours > 0) ? event.usageHours :
+                (typeof event.duration === 'number' && event.duration > 0) ? event.duration : 3;
               
               return {
                 _id: event._id || event.id,
@@ -404,11 +408,21 @@ function AdminReportContent() {
         }) : [];
         
         // Gunakan data asli tanpa memberikan nilai default
-        const processedEvents = filteredEvents.map((event: PastEvent) => ({
-          ...event,
-          occupancy: typeof event.occupancy === 'number' ? event.occupancy : 0,
-          usageHours: typeof event.usageHours === 'number' ? event.usageHours : 0
-        }));
+        const processedEvents = filteredEvents.map((event: PastEvent) => {
+          // Berikan nilai default untuk occupancy jika tidak ada
+          const occupancy = typeof event.occupancy === 'number' ? event.occupancy : 0;
+          
+          // Berikan durasi default 3 jam jika tidak ada, sesuai dokumentasi API
+          // Dari dokumentasi: "Setiap event diasumsikan memiliki durasi rata-rata 3 jam"
+          const usageHours = 
+            (typeof event.usageHours === 'number' && event.usageHours > 0) ? event.usageHours : 3;
+          
+          return {
+            ...event,
+            occupancy: occupancy,
+            usageHours: usageHours
+          };
+        });
         
         setPastEvents(processedEvents);
       }
@@ -464,6 +478,15 @@ function AdminReportContent() {
         
         // Pertama, ambil semua event - baik yang akan datang maupun yang sudah lewat
         try {
+          // Simpan semua nama event dari pastEvents yang sudah ada
+          const knownEventIds = new Map<string, string>();
+          
+          pastEvents.forEach(event => {
+            if (event._id && event.name) {
+              knownEventIds.set(event._id, event.name);
+            }
+          });
+
           const eventsResponse = await fetch('/api/admin/events', {
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -476,6 +499,21 @@ function AdminReportContent() {
             const eventsData = await eventsResponse.json();
             
             if (eventsData.data && Array.isArray(eventsData.data) && eventsData.data.length > 0) {
+              // Simpan semua nama event untuk lookup nanti
+              const newKnownEvents = new Map<string, string>(knownEventIds);
+              
+              eventsData.data.forEach((event: any) => {
+                if (event._id && event.name) {
+                  newKnownEvents.set(event._id, event.name);
+                }
+                if (event.id && event.name) {
+                  newKnownEvents.set(event.id, event.name);
+                }
+              });
+              
+              // Update state dengan event baru
+              setKnownEventIds(newKnownEvents);
+              
               const allEvents = eventsData.data.filter((event: any) => {
                 if (!event.date) return false;
                 
@@ -669,6 +707,89 @@ function AdminReportContent() {
     }
   };
   
+  // Fungsi untuk memuat semua data nama event
+  const loadAllEventNames = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('Token not found for loading event names');
+        return;
+      }
+      
+      // Mengambil dari /api/admin/events untuk semua event
+      const eventsResponse = await fetch('/api/admin/events', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (eventsResponse.ok) {
+        const eventsData = await eventsResponse.json();
+        
+        if (eventsData.data && Array.isArray(eventsData.data)) {
+          const newKnownEvents = new Map<string, string>(knownEventIds);
+          
+          eventsData.data.forEach((event: any) => {
+            if (event._id && event.name) {
+              // Tambahkan format nama yang jelas dengan tanggal
+              const eventDate = event.date ? ` - ${new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : '';
+              newKnownEvents.set(event._id, `${event.name}${eventDate}`);
+            }
+            
+            // Beberapa API mungkin menggunakan field id bukan _id
+            if (event.id && event.name && event.id !== event._id) {
+              const eventDate = event.date ? ` - ${new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : '';
+              newKnownEvents.set(event.id, `${event.name}${eventDate}`);
+            }
+          });
+          
+          setKnownEventIds(newKnownEvents);
+          console.log(`Loaded ${newKnownEvents.size} event names for reference`);
+        }
+      }
+      
+      // Juga coba mengambil dari endpoint /api/events untuk event publik
+      const publicEventsResponse = await fetch('/api/events', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (publicEventsResponse.ok) {
+        const publicEventsData = await publicEventsResponse.json();
+        
+        if (publicEventsData.data && Array.isArray(publicEventsData.data)) {
+          const newKnownEvents = new Map<string, string>(knownEventIds);
+          
+          publicEventsData.data.forEach((event: any) => {
+            if (event._id && event.name) {
+              const eventDate = event.date ? ` - ${new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : '';
+              newKnownEvents.set(event._id, `${event.name}${eventDate}`);
+            }
+            
+            if (event.id && event.name && event.id !== event._id) {
+              const eventDate = event.date ? ` - ${new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : '';
+              newKnownEvents.set(event.id, `${event.name}${eventDate}`);
+            }
+          });
+          
+          setKnownEventIds(newKnownEvents);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading all event names:', error);
+    }
+  };
+  
+  // Load event names saat komponen dimuat
+  useEffect(() => {
+    loadAllEventNames();
+  }, []);
+  
   // Load data based on active tab
   useEffect(() => {
     if (activeTab === "schedule") {
@@ -680,13 +801,18 @@ function AdminReportContent() {
     }
   }, [activeTab, dateRange]);
   
+  // Format number with 1 decimal place
+  const formatNumber = (value: number): string => {
+    return Number(value.toFixed(1)).toString();
+  };
+
   // Calculate average utilization
   const getAverageUtilization = () => {
     if (!utilization.length) return 0;
     const sum = utilization.reduce((acc, item) => acc + item.utilization_percentage, 0);
     return (sum / utilization.length).toFixed(1);
   };
-  
+
   // Format date for display
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('en-US', {
@@ -741,7 +867,7 @@ function AdminReportContent() {
   // Fungsi untuk mendapatkan nama event berdasarkan ID
   const getEventNameById = (eventId: string): string => {
     // Jika eventId tidak valid, kembalikan nilai default
-    if (!eventId) return 'Unknown Event';
+    if (!eventId) return 'Acara Tidak Diketahui';
     
     // Mencoba berbagai format ID untuk mencari event yang sesuai
     const event = pastEvents.find(e => {
@@ -758,19 +884,28 @@ function AdminReportContent() {
       return false;
     });
     
-    // Jika event ditemukan, kembalikan namanya
+    // Jika event ditemukan, kembalikan namanya dengan format yang lebih jelas
     if (event && event.name) {
-      return event.name;
+      // Tambahkan tanggal ke nama event
+      const dateStr = event.date ? ` - ${new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : '';
+      return `${event.name}${dateStr}`;
     }
     
     // Jika format event ID seperti ObjectId MongoDB (24 karakter hex)
     if (typeof eventId === 'string' && eventId.match(/^[0-9a-f]{24}$/i)) {
-      // Return nama yang lebih user-friendly
-      return `Acara #${eventId.substring(0, 6)}`;
+      // Gunakan nama generik dengan informasi
+      // Cari tanggal dari data utilization jika ada
+      for (const item of utilization) {
+        if (item.events && item.events.includes(eventId)) {
+          const dateStr = new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          return `Event pada ${dateStr}`;
+        }
+      }
+      return 'Acara (ID tidak ditemukan)';
     }
     
-    // Jika format lain, kembalikan langsung
-    return eventId;
+    // Jika format lain, tetap berikan nama yang jelas bukan ID
+    return 'Acara Tidak Dikenal';
   };
   
   // Download report function
@@ -833,6 +968,84 @@ function AdminReportContent() {
       setDownloading(false);
     }
   };
+  
+  // Fungsi untuk memuat semua data event
+  const loadAllEvents = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('Token not found for loading events');
+        return;
+      }
+      
+      console.log('Loading all events data for reference...');
+      
+      // Fetch dari /api/admin/events untuk mendapatkan semua event
+      const response = await fetch('/api/admin/events', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.data && Array.isArray(data.data)) {
+          console.log(`Loaded ${data.data.length} events from API`);
+          
+          // Tambahkan ke pastEvents jika belum ada
+          const existingIds = new Set(pastEvents.map(e => e._id));
+          const newEvents = data.data.filter((event: any) => !existingIds.has(event._id || event.id))
+            .map((event: any) => {
+              // Format event ke struktur PastEvent
+              const occupancy = 
+                (event.totalSeats && event.availableSeats) ? 
+                  ((event.totalSeats - event.availableSeats) / event.totalSeats) * 100 : 
+                (event.ticketsSold && event.totalSeats) ?
+                  (event.ticketsSold / event.totalSeats) * 100 : 0;
+                  
+              const usageHours = 
+                (typeof event.usageHours === 'number' && event.usageHours > 0) ? event.usageHours :
+                (typeof event.duration === 'number' && event.duration > 0) ? event.duration : 3;
+              
+              return {
+                _id: event._id || event.id,
+                name: event.name,
+                date: event.date,
+                time: event.time || "",
+                organizer: event.createdBy || event.organizer || {
+                  _id: event.organizerId || "",
+                  username: event.organizerUsername || "",
+                  fullName: event.organizerName || "",
+                  organizerName: event.organizerName || ""
+                },
+                totalSeats: event.totalSeats || 0,
+                availableSeats: event.availableSeats || 0,
+                occupancy: occupancy,
+                usageHours: usageHours
+              };
+            });
+          
+          // Gabungkan dengan pastEvents yang sudah ada
+          if (newEvents.length > 0) {
+            console.log(`Adding ${newEvents.length} new events to pastEvents for reference`);
+            setPastEvents(prevEvents => [...prevEvents, ...newEvents]);
+          }
+        }
+      } else {
+        console.error('Failed to load events from API:', response.status);
+      }
+    } catch (err) {
+      console.error('Error loading all events:', err);
+    }
+  };
+
+  // Load events saat komponen dimuat
+  useEffect(() => {
+    loadAllEvents();
+  }, []);
   
   return (
     <div className="min-h-screen flex flex-col bg-secondary">
@@ -1008,7 +1221,7 @@ function AdminReportContent() {
                   <div className="bg-white rounded-lg shadow-md p-4 border-t-4" style={{ borderTopColor: THEME_COLORS.quaternary }}>
                     <h3 className="text-sm font-medium text-gray-500">Total Hours Used</h3>
                     <p className="text-2xl font-bold">
-                      {pastEvents.reduce((sum, event) => sum + event.usageHours, 0).toFixed(1)}
+                      {formatNumber(pastEvents.reduce((sum, event) => sum + event.usageHours, 0))}
                     </p>
                   </div>
                 </div>
@@ -1062,7 +1275,7 @@ function AdminReportContent() {
                                   <span>{event.occupancy.toFixed(1)}%</span>
                                 </div>
                               </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{event.usageHours}</td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{formatNumber(event.usageHours)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -1086,14 +1299,14 @@ function AdminReportContent() {
                   <div className="bg-white rounded-lg shadow-md p-4 border-t-4" style={{ borderTopColor: THEME_COLORS.tertiary }}>
                     <h3 className="text-sm font-medium text-gray-500">Total Hours Available</h3>
                     <p className="text-2xl font-bold">
-                      {utilization.reduce((sum, item) => sum + item.total_hours_available, 0)}
+                      {formatNumber(utilization.reduce((sum, item) => sum + item.total_hours_available, 0))}
                     </p>
                   </div>
                   
                   <div className="bg-white rounded-lg shadow-md p-4 border-t-4" style={{ borderTopColor: THEME_COLORS.quaternary }}>
                     <h3 className="text-sm font-medium text-gray-500">Total Hours Used</h3>
                     <p className="text-2xl font-bold">
-                      {utilization.reduce((sum, item) => sum + item.total_hours_used, 0)}
+                      {formatNumber(utilization.reduce((sum, item) => sum + item.total_hours_used, 0))}
                     </p>
                   </div>
                 </div>
@@ -1173,8 +1386,8 @@ function AdminReportContent() {
                           {utilization.map((item, index) => (
                             <tr key={index} className="hover:bg-gray-50">
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{formatDate(item.date)}</td>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{item.total_hours_used}</td>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{item.total_hours_available}</td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{formatNumber(item.total_hours_used)}</td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{formatNumber(item.total_hours_available)}</td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                                 <div className="flex items-center">
                                   <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
@@ -1199,13 +1412,13 @@ function AdminReportContent() {
                                     <div className="space-y-1">
                                       {item.events.map((eventId, idx) => {
                                         const eventName = getEventNameById(eventId);
-                                        const isOriginalId = eventName.startsWith('Acara #');
+                                        const isUnknownEvent = eventName === 'Acara (ID tidak ditemukan)' || eventName === 'Acara Tidak Dikenal';
                                         
                                         return (
                                           <div 
                                             key={idx} 
-                                            className={`text-xs px-2 py-1 rounded ${isOriginalId ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}
-                                            title={eventId}
+                                            className={`text-xs px-2 py-1 rounded ${isUnknownEvent ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}
+                                            title={isUnknownEvent ? `Event ID: ${eventId}` : eventName}
                                           >
                                             {eventName}
                                           </div>
