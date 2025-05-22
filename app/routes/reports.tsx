@@ -114,17 +114,17 @@ function ReportPageContent() {
     return null;
   };
 
-  // Fungsi untuk memformat mata uang (RM)
+  // Function to format currency (RM)
   const formatCurrency = (value: number) => {
     return `RM ${value.toFixed(2)}`;
   };
 
-  // Fungsi untuk memformat persentase dengan dua desimal
+  // Function to format percentage with two decimals
   const formatPercentage = (value: number) => {
     return Number(value.toFixed(2));
   };
 
-  // Fungsi untuk memuat data event milik event organizer
+  // Function to load events belonging to the event organizer
   const loadEvents = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -155,7 +155,7 @@ function ReportPageContent() {
       
       console.log('Events data received:', data);
       
-      // Menyimpan data event untuk dropdown
+      // Storing event data for dropdown
       if (data.data && Array.isArray(data.data)) {
         const eventOptions = data.data.map((event: any) => ({
           id: event._id || event.id,
@@ -168,7 +168,7 @@ function ReportPageContent() {
           console.warn('No events found for this organizer');
           setEvents([{ id: "all", name: "All Events" }]);
         } else {
-          // Tambahkan opsi "All Events" di awal
+          // Add "All Events" option at the beginning
           setEvents([{ id: "all", name: "All Events" }, ...eventOptions]);
         }
       } else {
@@ -182,13 +182,13 @@ function ReportPageContent() {
     }
   };
 
-  // Load events saat komponen dimuat
+  // Load events when component mounts
   useEffect(() => {
     const loadInitialData = async () => {
       try {
         await loadEvents();
         
-        // Load data awal dari endpoint /api/reports/all sebagai default
+        // Load initial data from /api/reports/all endpoint as default
         await loadAllReports();
       } catch (err) {
         console.error("Gagal memuat data awal:", err);
@@ -199,7 +199,7 @@ function ReportPageContent() {
     loadInitialData();
   }, []);
 
-  // Fungsi khusus untuk memuat data /api/reports/all
+  // Specific function to load data from /api/reports/all
   const loadAllReports = async () => {
     setLoading(true);
     setError(null);
@@ -211,7 +211,7 @@ function ReportPageContent() {
         throw new Error('Token not found. Please login again.');
       }
       
-      // Buat URL dengan parameter eventId jika event tertentu dipilih
+      // Create URL with eventId parameter if specific event is selected
       let url = '/api/reports/all';
       const params = new URLSearchParams();
       
@@ -219,14 +219,14 @@ function ReportPageContent() {
         params.append('eventId', selectedEvent);
       }
       
-      // Tambahkan parameter ke URL jika ada
+      // Add parameters to URL if any exist
       if (params.toString()) {
         url += `?${params.toString()}`;
       }
       
       console.log(`Loading all reports with URL: ${url}`);
       
-      // Ambil data dari endpoint /api/reports/all dengan atau tanpa parameter eventId
+      // Get data from /api/reports/all endpoint with or without eventId parameter
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -248,7 +248,7 @@ function ReportPageContent() {
       const data = await response.json();
       console.log('API response data for all reports:', data);
       
-      // Cek jika API mengembalikan pesan error terkait event
+      // Check if API returns error message related to event
       if (data.message && data.message.includes("Event not found")) {
         setNoDataMessage(data.message);
         setReport(null);
@@ -256,16 +256,16 @@ function ReportPageContent() {
         return;
       }
       
-      // Cek jika API mengembalikan pesan "No data available"
+      // Check if API returns "No data available" message
       if (data.message && data.message === "No data available.") {
-        console.warn('API mengembalikan: No data available.');
+        console.warn('API returned: No data available.');
         setNoDataMessage("No data available for the selected filters.");
         setReport(null);
         setTableData([]);
         return;
       }
       
-      // Cek jika tidak ada data bermakna dalam respons
+      // Check if there is no meaningful data in the response
       if (data && data.ticketsSold === 0 && data.revenue === 0 && 
           (!data.ordersByDate || Object.keys(data.ordersByDate).length === 0)) {
         setNoDataMessage("No sales data found for the selected event. Try selecting a different event or date range.");
@@ -275,12 +275,12 @@ function ReportPageContent() {
       }
       
       if (data) {
-        // Format data untuk tampilan report
+        // Format data for report display
         const allReportData = {
           ticketsSold: data.ticketsSold || 0,
           revenue: data.revenue || 0,
           occupancyPercentage: data.occupancyPercentage || 0,
-          startDate: "All Time", // untuk format weekly
+          startDate: "All Time", // for weekly format
           endDate: "Report",
           salesData: Object.keys(data.ordersByDate || {}).map(date => ({
             day: date,
@@ -296,7 +296,7 @@ function ReportPageContent() {
           })) : []
         };
         
-        // Debugging log untuk data yang telah diproses
+        // Debug log for processed data
         console.log('Processed report data:', {
           ticketsSold: allReportData.ticketsSold,
           revenue: allReportData.revenue,
@@ -304,7 +304,7 @@ function ReportPageContent() {
           revenueDataPoints: allReportData.revenueData.length
         });
         
-        // Set report sebagai weekly report untuk tampilan
+        // Set report as weekly report for display
         setReport({
           startDate: allReportData.salesData.length > 0 ? allReportData.salesData[0].day : "All Time",
           endDate: allReportData.salesData.length > 0 ? allReportData.salesData[allReportData.salesData.length - 1].day : "Report",
@@ -315,10 +315,10 @@ function ReportPageContent() {
           revenueData: allReportData.revenueData
         } as WeeklyReport);
         
-        // Buat data tabel
+        // Create table data
         if (allReportData.salesData.length > 0) {
           const tableRows = allReportData.salesData.map((item, index) => {
-            // Cari occupancy untuk tanggal ini jika tersedia
+            // Search for occupancy for this date if available
             const dateOccupancy = allReportData.occupancyData && allReportData.occupancyData.length > 0
               ? allReportData.occupancyData.find(o => o.day === item.day)?.percentage
               : null;

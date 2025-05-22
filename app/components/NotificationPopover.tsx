@@ -54,7 +54,7 @@ export function NotificationPopover({
     };
   }, [isOpen, onClose]);
 
-  // Format tanggal
+  // Format date
   const formatDate = (date: Date) => {
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();

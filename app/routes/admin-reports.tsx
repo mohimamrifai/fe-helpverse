@@ -75,7 +75,7 @@ function AdminReportContent() {
     lightText: '#677489'
   };
   
-  // Load schedule data - Hanya untuk event yang akan datang dan saat ini
+  // Load schedule data - Only for upcoming and current events
   const loadSchedule = async () => {
     setLoading(true);
     setError(null);
@@ -86,7 +86,7 @@ function AdminReportContent() {
         throw new Error('Token not found. Please login again.');
       }
       
-      // Pertama, coba ambil data semua event dari endpoint admin untuk mendapatkan event yang akan datang
+      // First, try to get all event data from the admin endpoint to get upcoming events
       try {
         const eventsResponse = await fetch('/api/admin/events', {
           headers: {
@@ -100,35 +100,35 @@ function AdminReportContent() {
           const eventsData = await eventsResponse.json();
           
           if (eventsData.data && Array.isArray(eventsData.data)) {
-            // Filter untuk event yang AKAN DATANG atau SAAT INI berdasarkan tanggal
+            // Filter for UPCOMING or CURRENT events based on date
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             
             const futureEvents = eventsData.data.filter((event: any) => {
               if (!event.date) return false;
               
-              // Convert tanggal event ke objek Date
+              // Convert event date to Date object
               const eventDate = new Date(event.date);
               eventDate.setHours(0, 0, 0, 0);
               
-              // Tanggal event harus sama dengan atau setelah hari ini
+              // Event date must be same as or after today
               return eventDate >= today;
             });
             
             console.log('Found future events:', futureEvents.length);
             
-            // Konversi event ke format schedule item
+            // Convert events to schedule item format
             if (futureEvents.length > 0) {
               const scheduleItems = futureEvents.map((event: any, index: number) => {
-                // Buat waktu mulai dan selesai
+                // Create start and end times
                 const eventDate = new Date(event.date);
                 
-                // Waktu berdasarkan data event
+                // Time based on event data
                 let startHour = 0;
                 let startMinute = 0;
                 let duration = 0;
                 
-                // Jika ada waktu pada event, gunakan itu
+                // If there's time on the event, use it
                 if (event.time) {
                   const timeParts = event.time.split(':');
                   if (timeParts.length >= 2) {
@@ -137,33 +137,33 @@ function AdminReportContent() {
                   }
                 }
                 
-                // Durasi acara berdasarkan data yang ada atau estimasi dari API
+                // Event duration based on available data or API estimate
                 if (event.duration) {
                   duration = event.duration;
                 } else if (event.endTime && event.time) {
-                  // Hitung durasi jika ada data waktu mulai dan selesai
+                  // Calculate duration if start and end time data is available
                   const eventStart = new Date(eventDate);
                   eventStart.setHours(startHour, startMinute, 0, 0);
                   
                   const eventEnd = new Date(event.endTime);
                   
-                  // Durasi dalam jam
+                  // Duration in hours
                   duration = (eventEnd.getTime() - eventStart.getTime()) / (1000 * 60 * 60);
                 } else {
-                  // Jika tidak ada informasi durasi, coba ambil dari data terkait
+                  // If no duration information, try to get from related data
                   duration = event.usageHours || 0;
                 }
                 
-                // Jika masih belum ada durasi yang valid, biarkan API backend menentukan
+                // If still no valid duration, let the backend API determine
                 if (duration <= 0) {
-                  duration = 0; // API akan menangani durasi default jika diperlukan
+                  duration = 0; // API will handle default duration if needed
                 }
                 
-                // Set waktu mulai
+                // Set start time
                 const startTime = new Date(eventDate);
                 startTime.setHours(startHour, startMinute, 0, 0);
                 
-                // Set waktu selesai berdasarkan durasi
+                // Set end time based on duration
                 const endTime = new Date(startTime);
                 if (duration > 0) {
                   endTime.setTime(startTime.getTime() + (duration * 60 * 60 * 1000));
@@ -186,7 +186,7 @@ function AdminReportContent() {
                 };
               });
               
-              // Filter schedule items berdasarkan rentang tanggal yang dipilih
+              // Filter schedule items based on selected date range
               const fromDate = new Date(dateRange.from);
               const toDate = new Date(dateRange.to);
               fromDate.setHours(0, 0, 0, 0);
@@ -201,7 +201,7 @@ function AdminReportContent() {
               
               // Set schedule data
               setSchedule(filteredSchedule);
-              return; // Keluar dari fungsi jika berhasil
+              return; // Exit function if successful
             }
           }
         }
@@ -209,7 +209,7 @@ function AdminReportContent() {
         console.error('Error fetching from admin events for schedule:', err);
       }
       
-      // Jika tidak berhasil dengan endpoint admin events, gunakan endpoint schedule
+      // If not successful with admin events endpoint, use schedule endpoint
       const params = new URLSearchParams();
       params.append('from', dateRange.from);
       params.append('to', dateRange.to);
@@ -235,7 +235,7 @@ function AdminReportContent() {
       if (data.message && data.message.includes("Insufficient data")) {
         setSchedule([]);
       } else {
-        // Filter untuk memastikan hanya event future yang masuk ke schedule
+        // Filter for ensuring only future events enter schedule
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
@@ -275,7 +275,7 @@ function AdminReportContent() {
       
       console.log('Loading past events with date range:', dateRange);
       
-      // Pertama, coba load events dari endpoint admin events untuk mendapatkan semua event
+      // First, try to load events from admin events endpoint to get all events
       try {
         const eventsResponse = await fetch('/api/admin/events', {
           headers: {
@@ -290,34 +290,34 @@ function AdminReportContent() {
           console.log('Admin events data:', eventsData);
           
           if (eventsData.data && Array.isArray(eventsData.data) && eventsData.data.length > 0) {
-            // Filter untuk event yang SUDAH LEWAT berdasarkan tanggal saat ini
+            // Filter for events that have already passed based on current date
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             
             const validEvents = eventsData.data.filter((event: any) => {
               if (!event.date) return false;
               
-              // Convert tanggal event ke objek Date
+              // Convert event date to Date object
               const eventDate = new Date(event.date);
               eventDate.setHours(0, 0, 0, 0);
               
-              // Cek apakah event dalam rentang tanggal yang dipilih DAN sudah berlalu
+              // Check if event is within selected date range AND has already passed
               const fromDate = new Date(dateRange.from);
               const toDate = new Date(dateRange.to);
               fromDate.setHours(0, 0, 0, 0);
               toDate.setHours(23, 59, 59, 999);
               
               const isInDateRange = eventDate >= fromDate && eventDate <= toDate;
-              const isPastEvent = eventDate < today; // Event sudah lewat
+              const isPastEvent = eventDate < today; // Event has already passed
               
               return isInDateRange && isPastEvent;
             });
             
             console.log('Valid PAST events in date range:', validEvents.length);
             
-            // Siapkan data event dengan format PastEvent
+            // Prepare event data with PastEvent format
             const formattedEvents = validEvents.map((event: any) => {
-              // Hitung occupancy berdasarkan data yang tersedia
+              // Calculate occupancy based on available data
               let occupancy = 0;
               if (event.totalSeats && event.availableSeats) {
                 occupancy = ((event.totalSeats - event.availableSeats) / event.totalSeats) * 100;
@@ -325,8 +325,8 @@ function AdminReportContent() {
                 occupancy = (event.ticketsSold / event.totalSeats) * 100;
               }
               
-              // Gunakan data durasi dari event jika tersedia, atau default 3 jam sesuai dokumentasi API
-              // Dari dokumentasi: "Setiap event diasumsikan memiliki durasi rata-rata 3 jam"
+              // Use event duration data from event if available, or default 3 hours as per API documentation
+              // From API documentation: "Each event is assumed to have an average duration of 3 hours"
               const usageHours = 
                 (typeof event.usageHours === 'number' && event.usageHours > 0) ? event.usageHours :
                 (typeof event.duration === 'number' && event.duration > 0) ? event.duration : 3;
@@ -350,15 +350,15 @@ function AdminReportContent() {
             });
             
             setPastEvents(formattedEvents);
-            return; // Keluar dari fungsi jika berhasil
+            return; // Exit function if successful
           }
         }
       } catch (err) {
         console.error('Error fetching from admin events, falling back to events-held endpoint:', err);
-        // Lanjutkan ke endpoint events-held jika terjadi error
+        // Proceed to events-held endpoint if there's an error
       }
       
-      // Jika tidak berhasil mendapatkan data dari endpoint admin events, gunakan endpoint events-held
+      // If not successful getting data from admin events endpoint, use events-held endpoint
       const response = await fetch(`/api/admin/auditorium/events-held?${params.toString()}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -383,37 +383,37 @@ function AdminReportContent() {
       if (data.message && data.message.includes("Insufficient data")) {
         setPastEvents([]);
       } else {
-        // Filter events yang valid dengan kriteria yang lebih ketat - HANYA EVENT YANG SUDAH LEWAT
+        // Filter events that are valid with stricter criteria - ONLY EVENTS THAT HAVE ALREADY PASSED
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
         const filteredEvents = data.data ? data.data.filter((event: PastEvent) => {
-          // Verifikasi minimal memiliki data dasar yang valid
+          // Verify minimal having basic data valid
           const hasBasicData = event._id && event.name && event.date;
           
-          // Convert tanggal event ke objek Date
+          // Convert event date to Date object
           const eventDate = new Date(event.date);
           eventDate.setHours(0, 0, 0, 0);
           
-          // Tanggal event harus dalam rentang yang dipilih
+          // Event date must be within selected date range
           const fromDate = new Date(dateRange.from);
           const toDate = new Date(dateRange.to);
           fromDate.setHours(0, 0, 0, 0);
           toDate.setHours(23, 59, 59, 999);
           
           const isInDateRange = eventDate >= fromDate && eventDate <= toDate;
-          const isPastEvent = eventDate < today; // Event sudah lewat
+          const isPastEvent = eventDate < today; // Event has already passed
           
           return hasBasicData && isInDateRange && isPastEvent;
         }) : [];
         
-        // Gunakan data asli tanpa memberikan nilai default
+        // Use original data without giving default value
         const processedEvents = filteredEvents.map((event: PastEvent) => {
-          // Berikan nilai default untuk occupancy jika tidak ada
+          // Give default value for occupancy if not available
           const occupancy = typeof event.occupancy === 'number' ? event.occupancy : 0;
           
-          // Berikan durasi default 3 jam jika tidak ada, sesuai dokumentasi API
-          // Dari dokumentasi: "Setiap event diasumsikan memiliki durasi rata-rata 3 jam"
+          // Give default duration 3 hours if not available, as per API documentation
+          // From API documentation: "Each event is assumed to have an average duration of 3 hours"
           const usageHours = 
             (typeof event.usageHours === 'number' && event.usageHours > 0) ? event.usageHours : 3;
           
@@ -451,7 +451,7 @@ function AdminReportContent() {
       
       console.log('Loading utilization data with date range:', dateRange);
       
-      // Dapatkan data utilization
+      // Get utilization data
       const response = await fetch(`/api/admin/auditorium/utilization?${params.toString()}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -473,12 +473,12 @@ function AdminReportContent() {
       if (data.message && data.message.includes("Insufficient data")) {
         setUtilization([]);
       } else {
-        // Console log untuk debug
+        // Console log for debug
         console.log('Utilization data received:', data.data);
         
-        // Pertama, ambil semua event - baik yang akan datang maupun yang sudah lewat
+        // First, get all events - both upcoming and past
         try {
-          // Simpan semua nama event dari pastEvents yang sudah ada
+          // Save all event names from pastEvents that already exist
           const knownEventIds = new Map<string, string>();
           
           pastEvents.forEach(event => {
@@ -499,7 +499,7 @@ function AdminReportContent() {
             const eventsData = await eventsResponse.json();
             
             if (eventsData.data && Array.isArray(eventsData.data) && eventsData.data.length > 0) {
-              // Simpan semua nama event untuk lookup nanti
+              // Save all event names for lookup later
               const newKnownEvents = new Map<string, string>(knownEventIds);
               
               eventsData.data.forEach((event: any) => {
@@ -511,13 +511,13 @@ function AdminReportContent() {
                 }
               });
               
-              // Update state dengan event baru
+              // Update state with new event
               setKnownEventIds(newKnownEvents);
               
               const allEvents = eventsData.data.filter((event: any) => {
                 if (!event.date) return false;
                 
-                // Cek apakah event dalam rentang tanggal yang dipilih
+                // Check if event is within selected date range
                 const eventDate = new Date(event.date);
                 const fromDate = new Date(dateRange.from);
                 const toDate = new Date(dateRange.to);
@@ -529,13 +529,13 @@ function AdminReportContent() {
               
               console.log('All events for utilization:', allEvents.length);
               
-              // Buat map tanggal event untuk utilization
+              // Create event date map for utilization
               const eventDateMap = new Map();
               
               allEvents.forEach((event: any) => {
                 if (!event.date) return;
                 
-                // Format tanggal ke YYYY-MM-DD
+                // Format date to YYYY-MM-DD
                 const date = new Date(event.date);
                 const dateKey = date.toISOString().split('T')[0];
                 
@@ -543,8 +543,8 @@ function AdminReportContent() {
                   eventDateMap.set(dateKey, []);
                 }
                 
-                // Durasi dari data API - sesuai dokumentasi API, event memiliki durasi rata-rata 3 jam
-                // jika tidak ada data eksplisit
+                // Duration from API data - as per API documentation, event has average duration of 3 hours
+                // if no explicit data
                 const eventDuration = event.usageHours > 0 ? event.usageHours : 
                                        event.duration > 0 ? event.duration : 3;
                 
@@ -555,7 +555,7 @@ function AdminReportContent() {
                 });
               });
               
-              // Log untuk debug
+              // Log for debug
               console.log('Sample event data:', 
                 Array.from(eventDateMap.entries())
                   .slice(0, 2)
@@ -566,7 +566,7 @@ function AdminReportContent() {
                   }))
               );
               
-              // Dapatkan semua tanggal dalam rentang yang dipilih
+              // Get all dates within selected date range
               const fromDate = new Date(dateRange.from);
               const toDate = new Date(dateRange.to);
               fromDate.setHours(0, 0, 0, 0);
@@ -575,16 +575,16 @@ function AdminReportContent() {
               const allDatesInRange = new Set<string>();
               const currentDate = new Date(fromDate);
               
-              // Iterasi semua tanggal dalam rentang
+              // Iterate through all dates within range
               while (currentDate <= toDate) {
                 const dateKey = currentDate.toISOString().split('T')[0];
                 allDatesInRange.add(dateKey);
                 currentDate.setDate(currentDate.getDate() + 1);
               }
               
-              // Filter utilization data untuk hanya menyertakan data yang valid
+              // Filter utilization data to include only valid data
               const filteredUtilization = data.data ? data.data.filter((item: UtilizationData) => {
-                // Pastikan data utilization valid
+                // Ensure utilization data valid
                 const hasValidData = 
                   typeof item.total_hours_used === 'number' && 
                   typeof item.total_hours_available === 'number' && 
@@ -593,52 +593,52 @@ function AdminReportContent() {
                 return hasValidData;
               }) : [];
               
-              // Buat Map untuk menyimpan utilization berdasarkan tanggal
+              // Create Map to store utilization based on date
               const utilizationByDate = new Map<string, UtilizationData>();
               
-              // Tambahkan utilization data yang ada ke Map
+              // Add existing utilization data to Map
               filteredUtilization.forEach((item: UtilizationData) => {
                 const utilizationDate = new Date(item.date);
                 const dateKey = utilizationDate.toISOString().split('T')[0];
                 utilizationByDate.set(dateKey, item);
               });
               
-              // Buat array hasil akhir dengan data yang diperkaya
+              // Create final result array with enriched data
               const enhancedUtilization: UtilizationData[] = [];
               
-              // Iterasi setiap tanggal dalam rentang dan buat atau perbarui data utilization
+              // Iterate through each date within range and create or update utilization data
               allDatesInRange.forEach((dateKey) => {
                 const eventsForDate = eventDateMap.get(dateKey) || [];
                 const existingUtilization = utilizationByDate.get(dateKey);
                 
                 if (existingUtilization) {
-                  // Jika ada data utilization yang sudah ada, perbarui dengan event baru
+                  // If existing utilization data exists, update with new event
                   const currentEventIds = new Set(existingUtilization.events || []);
                   const updatedEvents = [...currentEventIds];
                   
-                  // Hitung total jam berdasarkan durasi aktual event
+                  // Calculate total hours based on actual event duration
                   let additionalHours = 0;
                   
                   eventsForDate.forEach((event: any) => {
                     if (!currentEventIds.has(event._id)) {
                       updatedEvents.push(event._id);
                       
-                      // Durasi event sudah pasti ada (default 3 jam dari langkah sebelumnya)
+                      // Event duration is already guaranteed (default 3 hours from previous step)
                       additionalHours += event.duration;
                     }
                   });
                   
-                  // Hitung total jam yang digunakan
+                  // Calculate total hours used
                   const totalHoursUsed = additionalHours > 0 ? 
                     Math.max(existingUtilization.total_hours_used, additionalHours) : 
                     existingUtilization.total_hours_used;
                   
-                  // Hitung utilization percentage berdasarkan total jam
+                  // Calculate utilization percentage based on total hours
                   const utilizationPercentage = existingUtilization.total_hours_available > 0 ?
                     Math.min(Math.max((totalHoursUsed / existingUtilization.total_hours_available) * 100, existingUtilization.utilization_percentage), 100) :
                     existingUtilization.utilization_percentage;
                   
-                  // Tambahkan item yang sudah diperbarui
+                  // Add updated item
                   enhancedUtilization.push({
                     ...existingUtilization,
                     events: updatedEvents,
@@ -646,7 +646,7 @@ function AdminReportContent() {
                     utilization_percentage: utilizationPercentage
                   });
                 } else if (eventsForDate.length > 0) {
-                  // Jika tidak ada data utilization tapi ada event, buat data baru
+                  // If no utilization data but there are events, create new data
                   interface EventWithId {
                     _id: string;
                     name?: string;
@@ -655,23 +655,23 @@ function AdminReportContent() {
                   
                   const eventIds = eventsForDate.map((event: EventWithId) => event._id);
                   
-                  // Hitung total jam - durasi event sudah ada dari langkah sebelumnya (default 3 jam)
+                  // Calculate total hours - event duration already exists from previous step (default 3 hours)
                   const totalHoursUsed = eventsForDate.reduce((sum: number, event: EventWithId) => 
                     sum + event.duration, 0);
                   
-                  // Sesuai dokumentasi API, default jam tersedia per hari
+                  // As per API documentation, default hours available per day
                   const totalHoursAvailable = 16; // 8:00 - 00:00
                   const utilizationPercentage = (totalHoursUsed / totalHoursAvailable) * 100;
                   
-                  // Buat date dari dateKey
+                  // Create date from dateKey
                   const dateParts = dateKey.split('-');
                   const utilizationDate = new Date(
                     parseInt(dateParts[0]), 
-                    parseInt(dateParts[1]) - 1, // Bulan dimulai dari 0
+                    parseInt(dateParts[1]) - 1, // Month starts from 0
                     parseInt(dateParts[2])
                   );
                   
-                  // Tambahkan data utilization baru
+                  // Add new utilization data
                   enhancedUtilization.push({
                     date: utilizationDate.toISOString(),
                     total_hours_used: totalHoursUsed,
@@ -682,7 +682,7 @@ function AdminReportContent() {
                 }
               });
               
-              // Urutkan utilization berdasarkan tanggal
+              // Sort utilization based on date
               enhancedUtilization.sort((a, b) => {
                 return new Date(a.date).getTime() - new Date(b.date).getTime();
               });
@@ -696,7 +696,7 @@ function AdminReportContent() {
           console.error('Error enhancing utilization with events data:', err);
         }
         
-        // Fallback ke data asli jika tidak bisa meningkatkan dengan event baru
+        // Fallback to original data if unable to improve with new event
         setUtilization(data.data || []);
       }
     } catch (err: any) {
@@ -707,7 +707,7 @@ function AdminReportContent() {
     }
   };
   
-  // Fungsi untuk memuat semua data nama event
+  // Function to load all event names
   const loadAllEventNames = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -716,7 +716,7 @@ function AdminReportContent() {
         return;
       }
       
-      // Mengambil dari /api/admin/events untuk semua event
+      // Get from /api/admin/events for all events
       const eventsResponse = await fetch('/api/admin/events', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -733,12 +733,12 @@ function AdminReportContent() {
           
           eventsData.data.forEach((event: any) => {
             if (event._id && event.name) {
-              // Tambahkan format nama yang jelas dengan tanggal
+              // Add clearer format with date
               const eventDate = event.date ? ` - ${new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : '';
               newKnownEvents.set(event._id, `${event.name}${eventDate}`);
             }
             
-            // Beberapa API mungkin menggunakan field id bukan _id
+            // Some APIs may use id field instead of _id
             if (event.id && event.name && event.id !== event._id) {
               const eventDate = event.date ? ` - ${new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : '';
               newKnownEvents.set(event.id, `${event.name}${eventDate}`);
@@ -750,7 +750,7 @@ function AdminReportContent() {
         }
       }
       
-      // Juga coba mengambil dari endpoint /api/events untuk event publik
+      // Also try getting from /api/events for public events
       const publicEventsResponse = await fetch('/api/events', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -785,7 +785,7 @@ function AdminReportContent() {
     }
   };
   
-  // Load event names saat komponen dimuat
+  // Load event names when component loads
   useEffect(() => {
     loadAllEventNames();
   }, []);
@@ -864,68 +864,78 @@ function AdminReportContent() {
     return roundedAverage;
   };
   
-  // Fungsi untuk mendapatkan nama event berdasarkan ID
+  // Function to get event name by ID
   const getEventNameById = (eventId: string): string => {
-    // Jika eventId tidak valid, kembalikan nilai default
-    if (!eventId) return 'Acara Tidak Diketahui';
-    
-    // Mencoba berbagai format ID untuk mencari event yang sesuai
-    const event = pastEvents.find(e => {
-      // Format standar: ID sama persis
-      if (e._id === eventId) return true;
-      
-      // Format string: ID sama persis setelah dikonversi ke string
-      if (e._id && e._id.toString() === eventId) return true;
-      
-      // Format alternatif: Jika memiliki id sebagai properti
-      // @ts-ignore - properti id mungkin ada jika dari API berbeda
-      if (e.id && (e.id === eventId || e.id.toString() === eventId)) return true;
-      
-      return false;
-    });
-    
-    // Jika event ditemukan, kembalikan namanya dengan format yang lebih jelas
-    if (event && event.name) {
-      // Tambahkan tanggal ke nama event
-      const dateStr = event.date ? ` - ${new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : '';
-      return `${event.name}${dateStr}`;
+    // Function to get event name by ID
+    if (!eventId || eventId === "unknown" || eventId === "undefined") {
+      return "Unknown Event";
     }
     
-    // Jika format event ID seperti ObjectId MongoDB (24 karakter hex)
-    if (typeof eventId === 'string' && eventId.match(/^[0-9a-f]{24}$/i)) {
-      // Gunakan nama generik dengan informasi
-      // Cari tanggal dari data utilization jika ada
-      for (const item of utilization) {
-        if (item.events && item.events.includes(eventId)) {
-          const dateStr = new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-          return `Event pada ${dateStr}`;
+    // Check if the ID is in the knownEventIds map
+    if (knownEventIds.has(eventId)) {
+      return knownEventIds.get(eventId) || "Unknown Event";
+    }
+    
+    // Check if it's a combined ID with format eventId_date
+    if (eventId.includes('_')) {
+      const parts = eventId.split('_');
+      const baseEventId = parts[0];
+      
+      // Check if the base ID is known
+      if (knownEventIds.has(baseEventId)) {
+        // Get the event name and format with date if available
+        const eventName = knownEventIds.get(baseEventId) || "Unknown Event";
+        if (parts.length > 1) {
+          try {
+            // Format with date if valid date part is available
+            const datePart = parts[1];
+            const date = new Date(datePart);
+            if (!isNaN(date.getTime())) {
+              return `${eventName} - ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+            }
+          } catch (err) {
+            console.error('Error parsing date from event ID:', err);
+          }
         }
+        return eventName;
       }
-      return 'Acara (ID tidak ditemukan)';
     }
     
-    // Jika format lain, tetap berikan nama yang jelas bukan ID
-    return 'Acara Tidak Dikenal';
+    // Try to find a matching event in pastEvents
+    const matchingPastEvent = pastEvents.find(event => event._id === eventId);
+    if (matchingPastEvent && matchingPastEvent.name) {
+      const eventDate = matchingPastEvent.date ? 
+        ` - ${new Date(matchingPastEvent.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : '';
+      return `${matchingPastEvent.name}${eventDate}`;
+    }
+    
+    return "Unknown Event";
   };
   
   // Download report function
   const downloadReport = async () => {
+    // Function to download report based on date range
     setDownloading(true);
-    setError(null);
-    
     try {
       const token = localStorage.getItem('token');
       if (!token) {
         throw new Error('Token not found. Please login again.');
       }
       
-      // Menggunakan tipe 'all' sebagai default tanpa parameter rentang waktu
-      let url = `/api/admin/auditorium/download-report?type=all`;
+      // Create URL parameters with date range
+      const params = new URLSearchParams();
+      params.append('type', 'all');
+      params.append('from', dateRange.from);
+      params.append('to', dateRange.to);
       
-      // Menggunakan fetch untuk mendapatkan data sebagai blob
+      // Construct URL with parameters
+      const url = `/api/admin/auditorium/download-report?${params.toString()}`;
+      
       const response = await fetch(url, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         }
       });
       
@@ -934,42 +944,32 @@ function AdminReportContent() {
       }
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
       
-      // Check untuk melihat apakah respons berisi JSON error atau file PDF
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        const data = await response.json();
-        if (data.message && data.message.includes("Insufficient data")) {
-          throw new Error('Insufficient data for the selected period.');
-        }
-      }
-      
-      // Download blob data sebagai file
+      // Get blob data for PDF download
       const blob = await response.blob();
-      const filename = response.headers.get('content-disposition')?.split('filename=')[1] || `auditorium-report-all.pdf`;
       
-      // Membuat URL untuk blob dan trigger download
-      const url_download = window.URL.createObjectURL(blob);
+      // Create download link and trigger click
+      const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url_download;
-      a.download = filename.replace(/"/g, '');
+      a.href = downloadUrl;
+      a.download = `auditorium-report-${dateRange.from}-to-${dateRange.to}.pdf`;
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url_download);
+      a.remove();
       
+      // Clean up URL object
+      window.URL.revokeObjectURL(downloadUrl);
     } catch (err: any) {
-      console.error('Failed to download report:', err);
+      console.error('Error downloading report:', err);
       setError(err.message || 'Failed to download report. Please try again.');
     } finally {
       setDownloading(false);
     }
   };
   
-  // Fungsi untuk memuat semua data event
+  // Function to load all event data
   const loadAllEvents = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -980,7 +980,7 @@ function AdminReportContent() {
       
       console.log('Loading all events data for reference...');
       
-      // Fetch dari /api/admin/events untuk mendapatkan semua event
+      // Fetch from /api/admin/events to get all events
       const response = await fetch('/api/admin/events', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -995,11 +995,11 @@ function AdminReportContent() {
         if (data.data && Array.isArray(data.data)) {
           console.log(`Loaded ${data.data.length} events from API`);
           
-          // Tambahkan ke pastEvents jika belum ada
+          // Add to pastEvents if not already exists
           const existingIds = new Set(pastEvents.map(e => e._id));
           const newEvents = data.data.filter((event: any) => !existingIds.has(event._id || event.id))
             .map((event: any) => {
-              // Format event ke struktur PastEvent
+              // Format event to PastEvent structure
               const occupancy = 
                 (event.totalSeats && event.availableSeats) ? 
                   ((event.totalSeats - event.availableSeats) / event.totalSeats) * 100 : 
@@ -1028,7 +1028,7 @@ function AdminReportContent() {
               };
             });
           
-          // Gabungkan dengan pastEvents yang sudah ada
+          // Combine with existing pastEvents
           if (newEvents.length > 0) {
             console.log(`Adding ${newEvents.length} new events to pastEvents for reference`);
             setPastEvents(prevEvents => [...prevEvents, ...newEvents]);
@@ -1042,7 +1042,7 @@ function AdminReportContent() {
     }
   };
 
-  // Load events saat komponen dimuat
+  // Load events when component loads
   useEffect(() => {
     loadAllEvents();
   }, []);
@@ -1412,7 +1412,7 @@ function AdminReportContent() {
                                     <div className="space-y-1">
                                       {item.events.map((eventId, idx) => {
                                         const eventName = getEventNameById(eventId);
-                                        const isUnknownEvent = eventName === 'Acara (ID tidak ditemukan)' || eventName === 'Acara Tidak Dikenal';
+                                        const isUnknownEvent = eventName === 'Event (ID not found)' || eventName === 'Unknown Event';
                                         
                                         return (
                                           <div 
