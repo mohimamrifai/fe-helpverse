@@ -600,7 +600,10 @@ function AdminReportContent() {
               filteredUtilization.forEach((item: UtilizationData) => {
                 const utilizationDate = new Date(item.date);
                 const dateKey = utilizationDate.toISOString().split('T')[0];
-                utilizationByDate.set(dateKey, item);
+                utilizationByDate.set(dateKey, {
+                  ...item,
+                  total_hours_available: 24 // Ensure all records use 24 hours as available
+                });
               });
               
               // Create final result array with enriched data
@@ -633,10 +636,8 @@ function AdminReportContent() {
                     Math.max(existingUtilization.total_hours_used, additionalHours) : 
                     existingUtilization.total_hours_used;
                   
-                  // Calculate utilization percentage based on total hours
-                  const utilizationPercentage = existingUtilization.total_hours_available > 0 ?
-                    Math.min(Math.max((totalHoursUsed / existingUtilization.total_hours_available) * 100, existingUtilization.utilization_percentage), 100) :
-                    existingUtilization.utilization_percentage;
+                  // Calculate utilization percentage based on total hours (24 hours per day)
+                  const utilizationPercentage = Math.min((totalHoursUsed / 24) * 100, 100);
                   
                   // Add updated item
                   enhancedUtilization.push({
@@ -659,8 +660,8 @@ function AdminReportContent() {
                   const totalHoursUsed = eventsForDate.reduce((sum: number, event: EventWithId) => 
                     sum + event.duration, 0);
                   
-                  // As per API documentation, default hours available per day
-                  const totalHoursAvailable = 16; // 8:00 - 00:00
+                  // Total hours available per day is 24 hours
+                  const totalHoursAvailable = 24;
                   const utilizationPercentage = (totalHoursUsed / totalHoursAvailable) * 100;
                   
                   // Create date from dateKey
@@ -687,8 +688,15 @@ function AdminReportContent() {
                 return new Date(a.date).getTime() - new Date(b.date).getTime();
               });
               
-              console.log('Enhanced utilization data with all events:', enhancedUtilization.length);
-              setUtilization(enhancedUtilization);
+              // Ensure all utilization records use 24 hours as available hours and update percentage
+              const finalUtilization = enhancedUtilization.map(item => ({
+                ...item,
+                total_hours_available: 24,
+                utilization_percentage: Math.min((item.total_hours_used / 24) * 100, 100)
+              }));
+              
+              console.log('Enhanced utilization data with all events:', finalUtilization.length);
+              setUtilization(finalUtilization);
               return;
             }
           }
@@ -696,8 +704,14 @@ function AdminReportContent() {
           console.error('Error enhancing utilization with events data:', err);
         }
         
-        // Fallback to original data if unable to improve with new event
-        setUtilization(data.data || []);
+        // Jika data dari backend, tetapkan total_hours_available ke 24
+        const processedUtilization = data.data ? data.data.map((item: UtilizationData) => ({
+          ...item,
+          total_hours_available: 24,
+          utilization_percentage: Math.min((item.total_hours_used / 24) * 100, 100)
+        })) : [];
+        
+        setUtilization(processedUtilization);
       }
     } catch (err: any) {
       console.error('Failed to load utilization:', err);
@@ -807,10 +821,20 @@ function AdminReportContent() {
   };
 
   // Calculate average utilization
-  const getAverageUtilization = () => {
-    if (!utilization.length) return 0;
-    const sum = utilization.reduce((acc, item) => acc + item.utilization_percentage, 0);
-    return (sum / utilization.length).toFixed(1);
+  const calculateAverageUtilization = (utilizationData: UtilizationData[]) => {
+    if (!utilizationData || utilizationData.length === 0) return 0;
+    
+    // Hitung total penggunaan jam dan total jam tersedia
+    const totalHoursUsed = utilizationData.reduce((sum, item) => sum + item.total_hours_used, 0);
+    const totalHoursAvailable = 24 * utilizationData.length; // 24 jam per hari
+    
+    // Hitung rata-rata persentase utilisasi secara keseluruhan
+    const averageUtilization = (totalHoursUsed / totalHoursAvailable) * 100;
+    const roundedAverage = Math.round(averageUtilization * 10) / 10;
+    
+    console.log(`Average utilization calculation: ${totalHoursUsed} / ${totalHoursAvailable} = ${roundedAverage}%`);
+    
+    return roundedAverage;
   };
 
   // Format date for display
@@ -841,25 +865,6 @@ function AdminReportContent() {
     const roundedAverage = Math.round(average * 10) / 10;
     
     console.log(`Average occupancy calculation: ${total} / ${events.length} = ${roundedAverage}%`);
-    
-    return roundedAverage;
-  };
-  
-  // Calculate average utilization
-  const calculateAverageUtilization = (utilizationData: UtilizationData[]) => {
-    if (!utilizationData || utilizationData.length === 0) return 0;
-    
-    // Sum up all utilization percentages
-    const total = utilizationData.reduce((sum: number, item: UtilizationData) => {
-      const utilPercentage = item.utilization_percentage || 0;
-      return sum + utilPercentage;
-    }, 0);
-    
-    // Calculate average and round to 1 decimal place
-    const average = total / utilizationData.length;
-    const roundedAverage = Math.round(average * 10) / 10;
-    
-    console.log(`Average utilization calculation: ${total} / ${utilizationData.length} = ${roundedAverage}%`);
     
     return roundedAverage;
   };
@@ -925,8 +930,8 @@ function AdminReportContent() {
       // Create URL parameters with date range
       const params = new URLSearchParams();
       params.append('type', 'all');
-      params.append('from', dateRange.from);
-      params.append('to', dateRange.to);
+      // params.append('from', dateRange.from);
+      // params.append('to', dateRange.to);
       
       // Construct URL with parameters
       const url = `/api/admin/auditorium/download-report?${params.toString()}`;
@@ -1299,7 +1304,7 @@ function AdminReportContent() {
                   <div className="bg-white rounded-lg shadow-md p-4 border-t-4" style={{ borderTopColor: THEME_COLORS.tertiary }}>
                     <h3 className="text-sm font-medium text-gray-500">Total Hours Available</h3>
                     <p className="text-2xl font-bold">
-                      {formatNumber(utilization.reduce((sum, item) => sum + item.total_hours_available, 0))}
+                      {formatNumber(24 * utilization.length)}
                     </p>
                   </div>
                   
@@ -1387,7 +1392,7 @@ function AdminReportContent() {
                             <tr key={index} className="hover:bg-gray-50">
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{formatDate(item.date)}</td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{formatNumber(item.total_hours_used)}</td>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{formatNumber(item.total_hours_available)}</td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{formatNumber(24)}</td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                                 <div className="flex items-center">
                                   <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
@@ -1403,7 +1408,7 @@ function AdminReportContent() {
                                       }}
                                     ></div>
                                   </div>
-                                  <span>{item.utilization_percentage}%</span>
+                                  <span title={`${formatNumber(item.total_hours_used)} jam dari 24 jam`}>{item.utilization_percentage.toFixed(1)}%</span>
                                 </div>
                               </td>
                               <td className="px-4 py-3 text-sm text-gray-500">
